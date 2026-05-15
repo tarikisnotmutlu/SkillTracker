@@ -8,6 +8,8 @@
 <meta name="theme-color" content="#0f0f0f">
 <title>Skill Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
@@ -230,13 +232,26 @@
     font-family: 'DM Mono', monospace; font-weight: 500;
   }
   .section-done-badge { font-size: 10px; font-family: 'DM Mono', monospace; }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+  .sync-dot.synced  { background: #34d399; }
+  .sync-dot.syncing { background: #f59e0b; animation: pulse 1s infinite; }
+  .sync-dot.offline { background: #f87171; }
+  .sync-dot.nokey   { background: #555; }
+  .sync-label { font-size: 10px; color: var(--muted); }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div class="header-title">Skill Tracker</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="header-title">Skill Tracker</div>
+    <div style="display:flex;align-items:center;gap:5px">
+      <div class="sync-dot nokey" id="syncDot"></div>
+      <span class="sync-label" id="syncLabel">sync kapalı</span>
+    </div>
+  </div>
   <div class="header-btns">
+    <button class="icon-btn" onclick="openModal('firebase')" title="Firebase Sync">☁</button>
     <button class="icon-btn" onclick="openModal('format')" title="JSON Formatı">?</button>
     <button class="icon-btn" onclick="openModal('import')" title="JSON Yükle">+</button>
     <button class="icon-btn" onclick="exportData()" title="Tümünü Dışa Aktar">↓</button>
@@ -269,15 +284,76 @@
 let data = {};
 let checked = {};
 let activeTrack = "";
+let db = null;
+let syncKey = "";
+let saveTimer = null;
+let remoteListener = null;
+let ignoreRemote = false;
 
 const DEFAULT_META = {
   german: { label: "Almanca B2",       icon: "🇩🇪", color: "#f59e0b", cls: "german" },
   dp100:  { label: "DP-100 + LLM/RAG", icon: "🤖",  color: "#818cf8", cls: "dp100"  },
 };
 
+// ── Sync status UI ────────────────────────────────────────────
+function setSyncStatus(state) {
+  const dot = document.getElementById("syncDot");
+  const lbl = document.getElementById("syncLabel");
+  if (!dot) return;
+  dot.className = "sync-dot " + state;
+  lbl.textContent = { synced:"senkronize", syncing:"kaydediliyor…", offline:"bağlantı yok", nokey:"sync kapalı" }[state] || state;
+}
+
+// ── Firebase init ─────────────────────────────────────────────
+function initFirebase(config, key) {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(config);
+    else firebase.app();
+    db = firebase.database();
+    syncKey = key;
+    try { localStorage.setItem("skt_fb_config", JSON.stringify(config)); } catch {}
+    try { localStorage.setItem("skt_fb_key", key); } catch {}
+    startRemoteListener();
+    setSyncStatus("syncing");
+  } catch(e) {
+    alert("Firebase bağlantı hatası: " + e.message);
+  }
+}
+
+function startRemoteListener() {
+  if (remoteListener) remoteListener();
+  if (!db || !syncKey) return;
+  const ref = db.ref(syncKey);
+  ref.on("value", snap => {
+    if (ignoreRemote) return;
+    const val = snap.val();
+    if (!val) { pushToFirebase(); return; }
+    if (val.data)    { data    = val.data;    try { localStorage.setItem("skt_data",    JSON.stringify(data));    } catch {} }
+    if (val.checked) { checked = val.checked; try { localStorage.setItem("skt_checked", JSON.stringify(checked)); } catch {} }
+    if (!activeTrack || !data[activeTrack]) activeTrack = Object.keys(data)[0] || "german";
+    render();
+    setSyncStatus("synced");
+  }, err => { setSyncStatus("offline"); });
+}
+
+function pushToFirebase() {
+  if (!db || !syncKey) return;
+  ignoreRemote = true;
+  setSyncStatus("syncing");
+  db.ref(syncKey).set({ data, checked })
+    .then(() => { setSyncStatus("synced"); })
+    .catch(() => { setSyncStatus("offline"); })
+    .finally(() => { setTimeout(() => { ignoreRemote = false; }, 300); });
+}
+
+// ── Save / Load ───────────────────────────────────────────────
 function save() {
   try { localStorage.setItem("skt_data",    JSON.stringify(data));    } catch {}
   try { localStorage.setItem("skt_checked", JSON.stringify(checked)); } catch {}
+  if (db && syncKey) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushToFirebase, 600);
+  }
 }
 
 function load() {
@@ -285,6 +361,12 @@ function load() {
   try { const c = localStorage.getItem("skt_checked"); if (c) checked = JSON.parse(c); } catch {}
   if (!Object.keys(data).length) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
   activeTrack = Object.keys(data)[0] || "german";
+  // Auto-reconnect if config was saved
+  try {
+    const cfg = localStorage.getItem("skt_fb_config");
+    const key = localStorage.getItem("skt_fb_key");
+    if (cfg && key) initFirebase(JSON.parse(cfg), key);
+  } catch {}
 }
 
 // ── Computed ─────────────────────────────────────────────────
@@ -497,6 +579,38 @@ function openModal(type) {
       <button class="apply-btn" onclick="submitJson()">Uygula</button>`;
   }
 
+  if (type === "firebase") {
+    title.textContent = "☁ Firebase Sync Kurulumu";
+    const savedKey = (() => { try { return localStorage.getItem("skt_fb_key") || ""; } catch { return ""; } })();
+    body.innerHTML = `
+      <p class="hint" style="margin-bottom:14px">
+        <strong>1.</strong> console.firebase.google.com → New project<br>
+        <strong>2.</strong> Realtime Database → Create → Test mode<br>
+        <strong>3.</strong> Project Settings → Web app → Config'i kopyala<br>
+        <strong>4.</strong> Aşağıya yapıştır, sync key belirle (şifre gibi bir kelime)
+      </p>
+      <div class="settings-row">
+        <label class="settings-label">Firebase Config (JSON — firebaseConfig objesinin içini yapıştır)</label>
+        <textarea id="fbConfig" rows="7" placeholder='{
+  "apiKey": "AIza...",
+  "authDomain": "proje.firebaseapp.com",
+  "databaseURL": "https://proje-default-rtdb.firebaseio.com",
+  "projectId": "proje",
+  "storageBucket": "proje.appspot.com",
+  "messagingSenderId": "123456",
+  "appId": "1:123456:web:abc"
+}'></textarea>
+      </div>
+      <div class="settings-row">
+        <label class="settings-label">Sync Key (tüm cihazlarda aynı olmalı — ör: tarik2026)</label>
+        <input type="text" id="fbKey" placeholder="tarik2026" value="${savedKey}">
+      </div>
+      <div id="fbError" class="error-msg"></div>
+      <button class="apply-btn" onclick="submitFirebase()">Bağlan & Sync Başlat</button>
+      ${db ? '<button style="width:100%;margin-top:8px;padding:12px;border-radius:10px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer;font-size:13px" onclick="disconnectFirebase()">Bağlantıyı Kes</button>' : ''}
+    `;
+  }
+
   if (type === "format") {
     title.textContent = "JSON Format Rehberi";
     body.innerHTML = `
@@ -544,6 +658,25 @@ function openModal(type) {
 }
       </pre>`;
   }
+}
+
+function submitFirebase() {
+  const cfgRaw = document.getElementById("fbConfig").value.trim();
+  const key    = document.getElementById("fbKey").value.trim();
+  if (!key) { document.getElementById("fbError").textContent = "⚠ Sync key boş olamaz."; return; }
+  let cfg;
+  try { cfg = JSON.parse(cfgRaw); } catch { document.getElementById("fbError").textContent = "⚠ Geçersiz JSON."; return; }
+  if (!cfg.databaseURL) { document.getElementById("fbError").textContent = "⚠ databaseURL eksik — Realtime Database aktif mi?"; return; }
+  initFirebase(cfg, key);
+  closeModal();
+}
+
+function disconnectFirebase() {
+  if (remoteListener) { db.ref(syncKey).off(); }
+  db = null; syncKey = "";
+  try { localStorage.removeItem("skt_fb_config"); localStorage.removeItem("skt_fb_key"); } catch {}
+  setSyncStatus("nokey");
+  closeModal();
 }
 
 function closeModal() {
@@ -781,6 +914,7 @@ const DEFAULT_DATA = {
 // ── Init ──────────────────────────────────────────────────────
 load();
 render();
+setSyncStatus(db ? "syncing" : "nokey");
 </script>
 </body>
 </html>
