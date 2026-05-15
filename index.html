@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f0f0f">
+<title>Skill Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --muted: #666;
+    --subtle: #333;
+    --german: #f59e0b;
+    --german-bg: rgba(245,158,11,0.1);
+    --dp100: #818cf8;
+    --dp100-bg: rgba(129,140,248,0.1);
+    --green: #34d399;
+    --red: #f87171;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 80px;
+    overscroll-behavior: none;
+  }
+
+  /* ── Header ── */
+  .header {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(15,15,15,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header-title { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .header-btns { display: flex; gap: 8px; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface);
+    color: var(--text); font-size: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── Track tabs ── */
+  .track-tabs {
+    display: flex; gap: 8px; padding: 14px 16px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .track-tabs::-webkit-scrollbar { display: none; }
+  .track-tab {
+    flex-shrink: 0; padding: 10px 14px; border-radius: var(--radius);
+    border: 1.5px solid var(--border); background: var(--surface);
+    cursor: pointer; min-width: 130px; transition: all 0.15s;
+  }
+  .track-tab.active-german { border-color: var(--german); background: var(--german-bg); }
+  .track-tab.active-dp100  { border-color: var(--dp100);  background: var(--dp100-bg); }
+  .track-tab-icon  { font-size: 20px; margin-bottom: 4px; }
+  .track-tab-label { font-size: 12px; font-weight: 700; color: var(--text); }
+  .track-tab-bar   { height: 3px; background: var(--subtle); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .track-tab-fill  { height: 100%; border-radius: 2px; transition: width 0.4s; }
+  .track-tab-pct   { font-size: 10px; font-weight: 700; margin-top: 4px; font-family: 'DM Mono', monospace; }
+
+  /* ── Sections ── */
+  .sections { padding: 0 12px; }
+  .section { margin-bottom: 8px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  .section-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; cursor: pointer;
+    background: var(--surface); user-select: none;
+  }
+  .section-header.done-german { background: var(--german-bg); border-bottom: 1px solid rgba(245,158,11,0.2); }
+  .section-header.done-dp100  { background: var(--dp100-bg);  border-bottom: 1px solid rgba(129,140,248,0.2); }
+  .section-title  { flex: 1; font-size: 13px; font-weight: 700; }
+  .section-count  { font-size: 11px; font-family: 'DM Mono', monospace; }
+  .section-arrow  { font-size: 10px; color: var(--muted); }
+
+  .todo-item {
+    display: flex; gap: 12px; padding: 11px 14px; cursor: pointer;
+    align-items: flex-start; border-top: 1px solid var(--border);
+    background: var(--surface); transition: background 0.1s; active: background: var(--subtle);
+  }
+  .todo-item:active { background: var(--subtle); }
+  .todo-item.checked-german { background: var(--german-bg); }
+  .todo-item.checked-dp100  { background: var(--dp100-bg); }
+
+  .checkbox {
+    width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0; margin-top: 1px;
+    border: 2px solid var(--subtle); background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .checkbox.checked-german { background: var(--german); border-color: var(--german); }
+  .checkbox.checked-dp100  { background: var(--dp100);  border-color: var(--dp100); }
+  .checkbox svg { display: none; }
+  .checkbox.checked-german svg, .checkbox.checked-dp100 svg { display: block; }
+
+  .todo-text { font-size: 13px; line-height: 1.5; color: var(--text); }
+  .todo-text.checked { color: var(--muted); text-decoration: line-through; }
+  .todo-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; line-height: 1.6; }
+
+  /* ── Bottom bar ── */
+  .bottom-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(15,15,15,0.95); backdrop-filter: blur(12px);
+    border-top: 1px solid var(--border);
+    padding: 10px 16px; padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    display: flex; gap: 10px;
+  }
+  .test-btn {
+    flex: 1; padding: 13px; border-radius: var(--radius); border: none;
+    font-weight: 700; font-size: 14px; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; transition: opacity 0.15s;
+  }
+  .test-btn:disabled { opacity: 0.5; }
+  .test-btn-german { background: var(--german); color: #000; }
+  .test-btn-dp100  { background: var(--dp100);  color: #000; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 100; padding: 0;
+  }
+  .modal {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    width: 100%; max-width: 640px; max-height: 90vh;
+    overflow: hidden; display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .modal-handle { width: 36px; height: 4px; background: var(--subtle); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px 10px; flex-shrink: 0; }
+  .modal-title  { font-size: 16px; font-weight: 700; }
+  .modal-close  { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px; }
+  .modal-body   { padding: 0 20px 20px; overflow-y: auto; flex: 1; }
+
+  textarea {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px; font-family: 'DM Mono', monospace; font-size: 12px;
+    resize: vertical; line-height: 1.6; outline: none;
+  }
+  textarea:focus { border-color: var(--dp100); }
+
+  .radio-row { display: flex; gap: 16px; margin-bottom: 12px; }
+  .radio-label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; color: var(--text); }
+  input[type="radio"] { accent-color: var(--dp100); }
+  input[type="text"] {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 12px; font-family: 'DM Mono', monospace; font-size: 12px;
+    outline: none; margin-bottom: 8px;
+  }
+  input[type="text"]:focus { border-color: var(--dp100); }
+
+  .apply-btn {
+    width: 100%; padding: 13px; border-radius: var(--radius); border: none;
+    background: var(--dp100); color: #000; font-weight: 700; font-size: 14px;
+    cursor: pointer; font-family: 'DM Sans', sans-serif; margin-top: 12px;
+  }
+  .file-btn {
+    display: inline-block; padding: 9px 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text); font-size: 12px; cursor: pointer; margin-bottom: 10px;
+  }
+
+  .error-msg { color: var(--red); font-size: 12px; margin-top: 8px; }
+
+  pre.format-block {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 14px;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    overflow-x: auto; line-height: 1.7; color: #a3e635;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+
+  /* Test output */
+  .test-output {
+    margin: 0 12px 12px; border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .test-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px; background: var(--surface);
+    font-size: 12px; font-weight: 700;
+  }
+  .test-close-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; }
+  .test-body {
+    padding: 14px; font-size: 12.5px; line-height: 1.8;
+    white-space: pre-wrap; max-height: 400px; overflow-y: auto;
+    background: var(--bg); color: var(--text);
+  }
+
+  .loading-dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted); animation: pulse 1s ease-in-out infinite;
+  }
+  .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+  /* API key setting */
+  .settings-row { margin-bottom: 14px; }
+  .settings-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; display: block; }
+
+  /* Progress ring */
+  .pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 20px; font-size: 10px;
+    font-family: 'DM Mono', monospace; font-weight: 500;
+  }
+  .section-done-badge { font-size: 10px; font-family: 'DM Mono', monospace; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Skill Tracker</div>
+  <div class="header-btns">
+    <button class="icon-btn" onclick="openModal('format')" title="JSON Formatı">?</button>
+    <button class="icon-btn" onclick="openModal('import')" title="JSON Yükle">+</button>
+    <button class="icon-btn" onclick="exportData()" title="Tümünü Dışa Aktar">↓</button>
+  </div>
+</div>
+
+<div class="track-tabs" id="trackTabs"></div>
+<div id="sectionsContainer" class="sections"></div>
+<div id="copyToast" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#34d399;color:#000;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:200;">✓ Kopyalandı!</div>
+
+<div class="bottom-bar">
+  <button class="test-btn" id="exportCheckedBtn" onclick="exportChecked()">Tiklenenlerı Kopyala</button>
+  <button class="test-btn" id="exportCheckedJsonBtn" onclick="exportCheckedJson()" style="flex:0;padding:13px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border);">↓ JSON</button>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle"></span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let data = {};
+let checked = {};
+let activeTrack = "";
+
+const DEFAULT_META = {
+  german: { label: "Almanca B2",       icon: "🇩🇪", color: "#f59e0b", cls: "german" },
+  dp100:  { label: "DP-100 + LLM/RAG", icon: "🤖",  color: "#818cf8", cls: "dp100"  },
+};
+
+function save() {
+  try { localStorage.setItem("skt_data",    JSON.stringify(data));    } catch {}
+  try { localStorage.setItem("skt_checked", JSON.stringify(checked)); } catch {}
+}
+
+function load() {
+  try { const d = localStorage.getItem("skt_data");    if (d) data    = JSON.parse(d); } catch {}
+  try { const c = localStorage.getItem("skt_checked"); if (c) checked = JSON.parse(c); } catch {}
+  if (!Object.keys(data).length) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  activeTrack = Object.keys(data)[0] || "german";
+}
+
+// ── Computed ─────────────────────────────────────────────────
+function allItems(tid)  { return (data[tid]?.sections || []).flatMap(s => s.items); }
+function doneCount(tid) { return allItems(tid).filter(i => checked[i.id]).length; }
+function pct(tid)       { const t = allItems(tid).length; return t ? Math.round(doneCount(tid)/t*100) : 0; }
+function trackCls(tid)  { return data[tid]?.meta?.cls || (DEFAULT_META[tid]?.cls) || "dp100"; }
+function trackColor(tid){ return data[tid]?.meta?.color || DEFAULT_META[tid]?.color || "#818cf8"; }
+
+// ── Render ───────────────────────────────────────────────────
+function render() {
+  renderTabs();
+  renderSections();
+  updateTestBtn();
+  save();
+}
+
+function renderTabs() {
+  const el = document.getElementById("trackTabs");
+  el.innerHTML = Object.entries(data).map(([tid, t]) => {
+    const m   = t.meta || DEFAULT_META[tid] || {};
+    const cls = m.cls || "dp100";
+    const active = tid === activeTrack ? `active-${cls}` : "";
+    const p = pct(tid);
+    return `<div class="track-tab ${active}" onclick="selectTrack('${tid}')">
+      <div class="track-tab-icon">${m.icon || "📋"}</div>
+      <div class="track-tab-label">${m.label || tid}</div>
+      <div class="track-tab-bar"><div class="track-tab-fill" style="width:${p}%;background:${m.color || '#818cf8'}"></div></div>
+      <div class="track-tab-pct" style="color:${m.color || '#818cf8'}">${doneCount(tid)}/${allItems(tid).length} · ${p}%</div>
+    </div>`;
+  }).join("");
+}
+
+let collapsed = {};
+function renderSections() {
+  const container = document.getElementById("sectionsContainer");
+  const t = data[activeTrack];
+  const cls = trackCls(activeTrack);
+  const color = trackColor(activeTrack);
+
+  if (!t?.sections?.length) {
+    container.innerHTML = `<div class="empty">
+      <div class="empty-icon">📭</div>
+      <p>Bu track'te henüz madde yok.<br>Sağ üstten + JSON Yükle ile ekle.</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = t.sections.map((sec, si) => {
+    const sk = `${activeTrack}-${si}`;
+    const isCol = collapsed[sk];
+    const secDone = sec.items.filter(i => checked[i.id]).length;
+    const allDone = secDone === sec.items.length && sec.items.length > 0;
+    const headerCls = allDone ? `done-${cls}` : "";
+    const arrow = isCol ? "▼" : "▲";
+
+    const items = isCol ? "" : sec.items.map((item, ii) => {
+      const isChecked = !!checked[item.id];
+      const chkCls = isChecked ? `checked-${cls}` : "";
+      return `<div class="todo-item ${chkCls}" onclick="toggleItem('${item.id}')">
+        <div class="checkbox ${chkCls}">
+          <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+            <path d="M1 4L3.5 6.5L9 1" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="flex:1">
+          <div class="todo-text ${isChecked ? 'checked' : ''}">${item.text}</div>
+          ${item.note ? `<div class="todo-note">💡 ${item.note}</div>` : ""}
+        </div>
+      </div>`;
+    }).join("");
+
+    return `<div class="section">
+      <div class="section-header ${headerCls}" onclick="toggleSection('${sk}')">
+        <span class="section-title">${sec.title}</span>
+        <span class="section-done-badge" style="color:${color}">${secDone}/${sec.items.length}</span>
+        <span class="section-arrow">${arrow}</span>
+      </div>
+      ${items}
+    </div>`;
+  }).join("");
+}
+
+function updateTestBtn() {
+  const btn = document.getElementById("exportCheckedBtn");
+  const cnt = Object.values(checked).filter(Boolean).length;
+  const m = data[activeTrack]?.meta || DEFAULT_META[activeTrack] || {};
+  const cls = m.cls || "dp100";
+  btn.className = `test-btn test-btn-${cls}`;
+  btn.textContent = `${m.icon || "📋"} Tiklenenlerı Kopyala (${cnt})`;
+}
+
+// ── Export Checked ────────────────────────────────────────────
+function exportChecked() {
+  const lines = [];
+  for (const [tid, t] of Object.entries(data)) {
+    const m = t.meta || DEFAULT_META[tid] || {};
+    const done = (t.sections || []).flatMap(s =>
+      s.items.filter(i => checked[i.id]).map(i => i.text)
+    );
+    if (done.length) {
+      lines.push(`=== ${m.label} (${done.length} madde) ===`);
+      done.forEach(txt => lines.push(`- ${txt}`));
+      lines.push("");
+    }
+  }
+  if (!lines.length) { alert("Henüz tiklenmiş madde yok."); return; }
+  const text = lines.join("\n").trim();
+  navigator.clipboard.writeText(text).then(() => showToast()).catch(() => {
+    prompt("Kopyala:", text);
+  });
+}
+
+function exportCheckedJson() {
+  const result = [];
+  for (const [tid, t] of Object.entries(data)) {
+    const m = t.meta || DEFAULT_META[tid] || {};
+    const done = (t.sections || []).flatMap(s =>
+      s.items.filter(i => checked[i.id]).map(i => ({ id: i.id, text: i.text }))
+    );
+    if (done.length) result.push({ track: tid, trackLabel: m.label, completed: done });
+  }
+  if (!result.length) { alert("Henüz tiklenmiş madde yok."); return; }
+  const blob = new Blob([JSON.stringify(result, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "tamamlananlar.json"; a.click();
+}
+
+function showToast() {
+  const t = document.getElementById("copyToast");
+  t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 2000);
+}
+
+function selectTrack(tid) { activeTrack = tid; render(); }
+
+function toggleItem(id) {
+  checked[id] = !checked[id];
+  render();
+}
+
+function toggleSection(sk) {
+  collapsed[sk] = !collapsed[sk];
+  renderSections();
+}
+
+// ── JSON Import ───────────────────────────────────────────────
+function applyJson(json, mode) {
+  let parsed;
+  try { parsed = JSON.parse(json); } catch { return "Geçersiz JSON."; }
+  const blocks = Array.isArray(parsed) ? parsed : [parsed];
+  let newData = mode === "replace" ? {} : JSON.parse(JSON.stringify(data));
+
+  for (const block of blocks) {
+    const tid = block.track;
+    if (!tid) return "'track' alanı zorunlu.";
+    if (!newData[tid]) {
+      newData[tid] = {
+        meta: {
+          label: block.trackLabel || tid,
+          icon:  block.icon  || "📋",
+          color: block.color || "#818cf8",
+          cls:   block.cls   || "dp100"
+        },
+        sections: []
+      };
+    }
+    if (block.section && block.items) {
+      const existing = newData[tid].sections.find(s => s.title === block.section);
+      if (existing && mode === "merge") {
+        const ids = new Set(existing.items.map(i => i.id));
+        block.items.forEach(item => { if (!ids.has(item.id)) existing.items.push(item); });
+      } else {
+        newData[tid].sections.push({ title: block.section, items: block.items });
+      }
+    }
+  }
+  data = newData;
+  activeTrack = Object.keys(data)[0];
+  render();
+  return null;
+}
+
+// ── Export ────────────────────────────────────────────────────
+function exportData() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "skill_tracker_data.json"; a.click();
+}
+
+// ── Modals ────────────────────────────────────────────────────
+let currentMode = "merge";
+
+function openModal(type) {
+  const overlay = document.getElementById("modalOverlay");
+  const title   = document.getElementById("modalTitle");
+  const body    = document.getElementById("modalBody");
+  overlay.style.display = "flex";
+
+  if (type === "import") {
+    title.textContent = "JSON Yükle";
+    body.innerHTML = `
+      <div class="radio-row">
+        <label class="radio-label"><input type="radio" name="mode" value="merge" checked onchange="currentMode='merge'"> Mevcut üzerine ekle</label>
+        <label class="radio-label"><input type="radio" name="mode" value="replace" onchange="currentMode='replace'"> Tamamını değiştir</label>
+      </div>
+      <label class="file-btn">📁 Dosyadan Aç<input type="file" accept=".json" style="display:none" onchange="readFile(this)"></label>
+      <textarea id="jsonInput" rows="9" placeholder='{"track":"german","section":"Yeni Konu","items":[{"id":"x01","text":"..."}]}'></textarea>
+      <div id="jsonError" class="error-msg"></div>
+      <button class="apply-btn" onclick="submitJson()">Uygula</button>`;
+  }
+
+  if (type === "format") {
+    title.textContent = "JSON Format Rehberi";
+    body.innerHTML = `
+      <p class="hint">Claude'dan şöyle iste: <strong>"dbt için to-do JSON yaz"</strong> veya <strong>"MLflow konuları için JSON üret"</strong>. Kopyala-yapıştır, uygula.</p>
+      <pre class="format-block">
+// Tek bölüm ekle:
+{
+  "track": "german",
+  "section": "Konjugation",
+  "items": [
+    { "id": "g01", "text": "sein fiilini öğren", "note": "İpucu" },
+    { "id": "g02", "text": "haben fiilini öğren" }
+  ]
+}
+
+// Birden fazla bölüm (array):
+[
+  {
+    "track": "dp100",
+    "section": "MLflow",
+    "items": [
+      { "id": "ml01", "text": "MLflow tracking öğren" }
+    ]
+  },
+  {
+    "track": "german",
+    "section": "Passiv",
+    "items": [
+      { "id": "pv01", "text": "Vorgangspassiv öğren" }
+    ]
+  }
+]
+
+// Yeni track ekle:
+{
+  "track": "dbt",
+  "trackLabel": "dbt + Data Eng.",
+  "icon": "🔧",
+  "color": "#34d399",
+  "cls": "green",
+  "section": "Kurulum",
+  "items": [
+    { "id": "d01", "text": "dbt Core kur: pip install dbt-core" }
+  ]
+}
+      </pre>`;
+  }
+}
+
+function closeModal() {
+  document.getElementById("modalOverlay").style.display = "none";
+}
+
+function readFile(input) {
+  const file = input.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = e => { document.getElementById("jsonInput").value = e.target.result; };
+  r.readAsText(file);
+}
+
+function submitJson() {
+  const json = document.getElementById("jsonInput").value.trim();
+  const err = applyJson(json, currentMode);
+  if (err) { document.getElementById("jsonError").textContent = "⚠ " + err; return; }
+  closeModal();
+}
+
+
+// ── Default Data ─────────────────────────────────────────────
+const DEFAULT_DATA = {
+  german: {
+    meta: { label: "Almanca B2", icon: "🇩🇪", color: "#f59e0b", cls: "german" },
+    sections: [
+      { title: "A1–A2 — Konjugation", items: [
+        { id: "g01", text: "sein fiilini tüm şahıslarla ezberle (ich bin, du bist, er ist...)" },
+        { id: "g02", text: "haben fiilini tüm şahıslarla ezberle" },
+        { id: "g03", text: "werden fiilini tüm şahıslarla ezberle" },
+        { id: "g04", text: "5 modal fiili öğren: können, müssen, wollen, dürfen, sollen", note: "Her birini 3 cümleyle yaz" },
+        { id: "g05", text: "10 düzenli fiili çek: machen, lernen, spielen, arbeiten, wohnen, kaufen, fragen, hören, sagen, suchen" },
+        { id: "g06", text: "10 düzensiz fiili çek: fahren, schlafen, essen, sehen, lesen, geben, nehmen, kommen, laufen, tragen" },
+        { id: "g07", text: "Anki'ye 'German verb conjugation A1' destesini kur, günlük tekrar başlat" },
+        { id: "g08", text: "Trennbare Verben öğren: aufstehen, anrufen, einkaufen, fernsehen", note: "Fiil ikiye ayrılıyor: Ich rufe dich an." },
+        { id: "g09", text: "Reflexive Verben öğren: sich waschen, sich freuen, sich erinnern", note: "B1'de sık çıkar" },
+      ]},
+      { title: "A1–A2 — Fälle (4 Hal)", items: [
+        { id: "g10", text: "Nominativ tablosunu ezberle: der/die/das/die, ein/eine/ein/–" },
+        { id: "g11", text: "Akkusativ tablosunu ezberle: den/die/das/die, einen/eine/ein/–" },
+        { id: "g12", text: "Dativ tablosunu ezberle: dem/der/dem/den, einem/einer/einem/–" },
+        { id: "g13", text: "Genitiv tablosunu ezberle: des/der/des/der, eines/einer/eines/–" },
+        { id: "g14", text: "yourdailygerman.com 'German cases explained' — Part 1 oku ve alıştırmaları yap" },
+        { id: "g15", text: "yourdailygerman.com — Part 2 ve 3 tamamla" },
+        { id: "g16", text: "Her hal için 5'er özgün cümle yaz (Nominativ konuyla ilgili, Akkusativ nesneyle ilgili...)" },
+        { id: "g17", text: "Sıfat çekimini öğren: der große Mann / einen großen Mann / mit dem großen Mann" },
+        { id: "g18", text: "Hal alıştırması: 10 cümlede boşluk doldur (der/den/dem/des seç)" },
+      ]},
+      { title: "A1–A2 — Wortstellung", items: [
+        { id: "g19", text: "V2 kuralını öğren: fiil her zaman 2. pozisyonda — 10 örnek cümle yaz" },
+        { id: "g20", text: "Soru cümleleri kur: W-Fragen (was, wo, wann, warum, wer, wie) — 10 cümle" },
+        { id: "g21", text: "Ja/Nein soruları kur — fiil başa geçer: Arbeitest du in München?" },
+        { id: "g22", text: "Koordinasyon bağlaçları: und/aber/oder/denn/sondern — her biri için 3 cümle" },
+        { id: "g23", text: "Subordinasyon bağlaçları: weil/dass/wenn/obwohl — fiil sona gider — 10 cümle" },
+        { id: "g24", text: "TE-KA-MO-LO sırasını öğren: temporal / kausal / modal / lokal", note: "Ich fahre morgen mit dem Auto nach Berlin." },
+        { id: "g25", text: "Olumsuz cümleler: nicht ve kein kullanımı — 10 cümle" },
+      ]},
+      { title: "A1–A2 — Präpositionen", items: [
+        { id: "g26", text: "5 Akkusativ edatını ezberle: durch, für, gegen, ohne, um — her biri için 2 cümle" },
+        { id: "g27", text: "7 Dativ edatını ezberle: aus, bei, mit, nach, seit, von, zu — her biri için 2 cümle" },
+        { id: "g28", text: "9 ikili edatı listele: in/an/auf/über/unter/vor/hinter/neben/zwischen" },
+        { id: "g29", text: "İkili edatlarda hareket (Akkusativ) vs. konum (Dativ) kuralını öğren", note: "Ich gehe in die Küche (hareket) / Ich bin in der Küche (konum)" },
+        { id: "g30", text: "İkili edatlar için 10 cümle çifti yaz: her edat için hareket + konum versiyonu" },
+        { id: "g31", text: "Anki: 'German prepositions cases' destesini başlat" },
+        { id: "g32", text: "Genitiv edatları öğren: wegen, trotz, während, statt", note: "B2'de yazıda sık kullanılır" },
+      ]},
+      { title: "A1–A2 — Zeitformen: Perfekt", items: [
+        { id: "g33", text: "haben ile kullanılan 20 fiil listesi çıkar (çoğu geçişli fiil)" },
+        { id: "g34", text: "sein ile kullanılan 15 fiili listele: gehen, kommen, fahren, fliegen, fallen, sterben, werden...", note: "Hareket ve değişim fiilleri sein alır" },
+        { id: "g35", text: "Düzenli Partizip II yapımını öğren: ge- + Stamm + -t (gemacht, gelernt)" },
+        { id: "g36", text: "30 düzensiz Partizip II'yi ezberle", note: "gehen→gegangen, schreiben→geschrieben, essen→gegessen..." },
+        { id: "g37", text: "Perfekt ile her gün 5 cümle yaz: Dün ne yaptın?" },
+        { id: "g38", text: "Trennbare Verben'de Partizip II: aufgestanden, eingekauft, angerufen — 5 örnek" },
+      ]},
+      { title: "B1 — Präteritum & Plusquamperfekt", items: [
+        { id: "g39", text: "war, hatte, wurde — tüm şahıslarla ezberle" },
+        { id: "g40", text: "Düzenli Präteritum yapımı: -te eki — ich machte, du machtest..." },
+        { id: "g41", text: "20 düzensiz Präteritum formunu ezberle: ging, kam, fuhr, schrieb, aß, sah..." },
+        { id: "g42", text: "Perfekt vs. Präteritum farkını anla: konuşmada Perfekt, yazıda/anlatıda Präteritum" },
+        { id: "g43", text: "Kısa bir hikaye yaz (10+ cümle) — sadece Präteritum kullanarak" },
+        { id: "g44", text: "Plusquamperfekt öğren: hatte/war + Partizip II — 'Önce ... olmuştu, sonra ...' yapısı" },
+        { id: "g45", text: "Plusquamperfekt ile 5 cümle yaz: Nachdem ich gegessen hatte, ging ich schlafen." },
+      ]},
+      { title: "B1 — Konjunktiv II", items: [
+        { id: "g46", text: "würde + Infinitiv yapısını öğren — en kolay Konjunktiv II formu" },
+        { id: "g47", text: "hätte/wäre/könnte/müsste/dürfte/sollte — tüm şahıslarla ezberle" },
+        { id: "g48", text: "10 dilek cümlesi yaz: Ich würde gern nach Japan reisen." },
+        { id: "g49", text: "10 kibarca rica cümlesi yaz: Könnten Sie mir bitte helfen? Hätten Sie Zeit?" },
+        { id: "g50", text: "Wenn-Sätze yaz: Wenn ich mehr Zeit hätte, würde ich mehr lesen. — 5 cümle" },
+        { id: "g51", text: "Konjunktiv II ile dolaylı anlatım öğren: Er sagte, er wäre krank gewesen." },
+      ]},
+      { title: "B1 — Passiv", items: [
+        { id: "g52", text: "Vorgangspassiv öğren: werden + Partizip II — 10 aktif cümleyi pasife çevir" },
+        { id: "g53", text: "Zustandspassiv öğren: sein + Partizip II — 5 örnek (Das Fenster ist geöffnet.)" },
+        { id: "g54", text: "Passiv + Modal öğren: Das muss/kann/soll/darf gemacht werden — 5 cümle" },
+        { id: "g55", text: "Passiv + Zeitformen: Präsens / Präteritum / Perfekt formlarını kur" },
+        { id: "g56", text: "Teknik bir süreç seç (yazılım geliştirme, üretim) ve Passiv ile anlat — 8 cümle" },
+      ]},
+      { title: "B1 — Relativsätze & Wortschatz", items: [
+        { id: "g57", text: "Nominativ Relativsatz öğren: Der Mann, der dort steht, ist mein Kollege." },
+        { id: "g58", text: "Akkusativ Relativsatz öğren: Das Buch, das ich lese, ist sehr interessant." },
+        { id: "g59", text: "Dativ Relativsatz öğren: Der Kollege, dem ich geholfen habe, hat sich bedankt." },
+        { id: "g60", text: "wo/was/wer ile relatif cümleler öğren — 5'er örnek" },
+        { id: "g61", text: "Her gün 3 yeni kelimeyi relatif cümleyle tanımla" },
+        { id: "g62", text: "Anki: Goethe B2 Wortliste destesini başlat — günde 20 kart" },
+        { id: "g63", text: "İş hayatı vocabulary listesi çıkar: 30 kelime (Besprechung, Zuständigkeit, Deadline...)" },
+        { id: "g64", text: "Technologie vocabulary listesi çıkar: 25 kelime (Datenschutz, Benutzeroberfläche...)" },
+      ]},
+      { title: "B2 — İleri Yapılar", items: [
+        { id: "g65", text: "Partizip I kullanımını öğren: der laufende Mann / das wachsende Unternehmen" },
+        { id: "g66", text: "Partizip II sıfat olarak öğren: das gebaute Haus / die gemachte Arbeit" },
+        { id: "g67", text: "5 gazete cümlesindeki Partizipialkonstruktion'ı relatif cümleye çevir" },
+        { id: "g68", text: "Zweiteilige Konnektoren öğren: sowohl...als auch ile 3 cümle" },
+        { id: "g69", text: "weder...noch ile 3 cümle yaz" },
+        { id: "g70", text: "zwar...aber ile 3 cümle yaz" },
+        { id: "g71", text: "nicht nur...sondern auch ile 3 cümle yaz" },
+        { id: "g72", text: "Infinitivkonstruktionen öğren: um...zu, ohne...zu, anstatt...zu — 5'er cümle" },
+      ]},
+      { title: "B2 — Sınav Hazırlığı", items: [
+        { id: "g73", text: "Goethe B2 sınav formatını incele: 4 bölüm, süreleri ve puanları öğren" },
+        { id: "g74", text: "Schreiben formatını öğren: resmi mektup yapısı (Betreff, Anrede, Schlussformel)" },
+        { id: "g75", text: "1. resmi mektup yaz (şikayet veya başvuru) — LanguageTool ile düzelt" },
+        { id: "g76", text: "2. argüman yazısı yaz — Konnektoren kullan, giriş-gelişme-sonuç" },
+        { id: "g77", text: "3. bir makale özetini yaz — kendi cümlerinle" },
+        { id: "g78", text: "Goethe B2 Lesen mock test 1 — süreyi tut, puanını kaydet" },
+        { id: "g79", text: "Goethe B2 Hören mock test 1 — süreyi tut" },
+        { id: "g80", text: "Tandem partner ile B2 Sprechen mock: konu sun, tartış — kaydet ve dinle" },
+        { id: "g81", text: "Tam mock sınav (4 bölüm, gerçek süreyle) — zayıf bölümü belirle" },
+        { id: "g82", text: "Goethe B2 sınavına kaydol — goethe.de/muenchen" },
+      ]},
+    ]
+  },
+  dp100: {
+    meta: { label: "DP-100 + LLM/RAG", icon: "🤖", color: "#818cf8", cls: "dp100" },
+    sections: [
+      { title: "Kurulum & Ortam", items: [
+        { id: "d01", text: "Azure hesabını doğrula veya ücretsiz hesap aç — aka.ms/azureforstudents" },
+        { id: "d02", text: "Azure ML workspace oluştur (resource group: rg-thesis-ml)" },
+        { id: "d03", text: "VS Code kur + Python + Pylance + Jupyter extension" },
+        { id: "d04", text: "Python venv oluştur: python -m venv .venv, aktive et" },
+        { id: "d05", text: "Temel paketleri yükle: azure-ai-ml, mlflow, langchain, openai, chromadb, streamlit" },
+        { id: "d06", text: "GitHub repo aç: llm-rag-pipeline — .gitignore, README şablonu ekle" },
+        { id: "d07", text: "OpenAI API key al — platform.openai.com ($5 kredi başlangıç için yeterli)" },
+        { id: "d08", text: ".env dosyası kur, python-dotenv ile key yükle — key'i asla commit etme" },
+        { id: "d09", text: "Azure CLI kur ve az login ile bağlan" },
+      ]},
+      { title: "DP-100 — Azure ML Temelleri", items: [
+        { id: "d10", text: "MS Learn: 'Design and prepare an Azure ML solution' modülünü oku" },
+        { id: "d11", text: "Azure ML Studio'yu aç, tüm menüleri gez: Assets, Jobs, Endpoints, Datastores" },
+        { id: "d12", text: "Compute instance oluştur (Standard_DS11_v2 — ucuz), başlat ve bağlan" },
+        { id: "d13", text: "Blob Storage oluştur, Azure ML Datastore olarak bağla" },
+        { id: "d14", text: "Örnek CSV dataset yükle, Azure ML'e Data asset olarak kaydet" },
+        { id: "d15", text: "Azure ML Environment oluştur: conda.yml veya pip requirements ile" },
+        { id: "d16", text: "Workspace, compute, datastore, environment ilişkisini kendi cümlesinle açıkla" },
+      ]},
+      { title: "DP-100 — Model Eğitimi & AutoML", items: [
+        { id: "d17", text: "MS Learn: 'Explore data and train models with Azure ML' modülünü tamamla" },
+        { id: "d18", text: "AutoML nedir, ne zaman kullanılır — 5 cümleyle özetle" },
+        { id: "d19", text: "AutoML ile classification denemesi başlat — örnek iris veya titanic dataset" },
+        { id: "d20", text: "AutoML sonuçlarını analiz et: best model, accuracy, confusion matrix" },
+        { id: "d21", text: "Script tabanlı eğitim yaz: train.py ile sklearn modeli eğit, Azure ML job olarak gönder" },
+        { id: "d22", text: "Hyperparameter tuning öğren: sweep job nedir, search space nasıl tanımlanır" },
+        { id: "d23", text: "Responsible AI dashboard: feature importance, error analysis incele" },
+      ]},
+      { title: "DP-100 — MLflow & Model Registry", items: [
+        { id: "d24", text: "MLflow nedir, Azure ML ile ilişkisi nedir — oku ve özetle" },
+        { id: "d25", text: "mlflow.log_param() ve mlflow.log_metric() kullan — basit script yaz" },
+        { id: "d26", text: "mlflow.log_artifact() ile model dosyası kaydet" },
+        { id: "d27", text: "Azure ML'e MLflow autolog entegre et: mlflow.sklearn.autolog()" },
+        { id: "d28", text: "Azure ML Model Registry'ye model kaydet — mlflow.register_model()" },
+        { id: "d29", text: "Kayıtlı modeli load et: mlflow.pyfunc.load_model() ile tahmin yap" },
+        { id: "d30", text: "Experiment runs'ı Azure ML Studio'da karşılaştır — metrics tablosu" },
+      ]},
+      { title: "DP-100 — Pipelines", items: [
+        { id: "d31", text: "MS Learn: 'Build and operate ML solutions' modülünü tamamla" },
+        { id: "d32", text: "Azure ML Pipeline nedir, neden kullanılır — oku" },
+        { id: "d33", text: "SDK v2 ile 2 adımlı pipeline yaz: data prep → model training" },
+        { id: "d34", text: "Pipeline'a 3. adım ekle: model evaluation" },
+        { id: "d35", text: "Pipeline'ı compute cluster üzerinde çalıştır" },
+        { id: "d36", text: "Pipeline output'larını bir sonraki adıma input olarak geçir" },
+        { id: "d37", text: "Scheduled pipeline kur: her hafta otomatik çalışsın" },
+      ]},
+      { title: "DP-100 — Endpoints & Deployment", items: [
+        { id: "d38", text: "Real-time endpoint vs batch endpoint farkını öğren" },
+        { id: "d39", text: "Managed online endpoint oluştur, modeli deploy et" },
+        { id: "d40", text: "Endpoint'e Python ile test isteği gönder: requests.post()" },
+        { id: "d41", text: "Blue/green deployment öğren: traffic split nedir" },
+        { id: "d42", text: "Batch endpoint oluştur, büyük CSV dosyası üzerinde inference çalıştır" },
+        { id: "d43", text: "Endpoint monitoring: latency, throughput, error rate metrikleri incele" },
+        { id: "d44", text: "Maliyeti kontrol et: endpoint ve compute'u sil, kullanmadığında durdur" },
+      ]},
+      { title: "DP-100 — Sınav Hazırlığı", items: [
+        { id: "d45", text: "MS Learn DP-100 Learning Path: tüm modüllerin tamamlandığını doğrula" },
+        { id: "d46", text: "Udemy DP-100 kurs al (Scott Duffy veya Alan Rodrigues) — satışta bekle" },
+        { id: "d47", text: "Udemy mock exam 1 — puanı ve zayıf alanları not et" },
+        { id: "d48", text: "Zayıf alanları MS Learn'de tekrar et" },
+        { id: "d49", text: "Udemy mock exam 2 — hedef %75+" },
+        { id: "d50", text: "Sınava kaydol: microsoft.com/learning — Pearson VUE, ~165€" },
+        { id: "d51", text: "Sınav günü: Azure ML SDK v2 syntax'ını tekrar gözden geçir" },
+      ]},
+      { title: "LLM / RAG — Temel", items: [
+        { id: "d52", text: "LangChain docs: 'Build a simple LLM app' tutorial'ını yap" },
+        { id: "d53", text: "PromptTemplate ile dinamik prompt oluştur — 3 farklı şablon yaz" },
+        { id: "d54", text: "ChatOpenAI modeli bağla, basit soru-cevap çalıştır" },
+        { id: "d55", text: "LLMChain kur: prompt + model + output parser zinciri" },
+        { id: "d56", text: "Conversation memory ekle: ConversationBufferMemory — çok turlu sohbet" },
+        { id: "d57", text: "HuggingFace ücretsiz model dene: HuggingFaceHub entegrasyonu" },
+        { id: "d58", text: "RAG nedir, neden kullanılır — 5 cümleyle özetle, diyagram çiz" },
+      ]},
+      { title: "LLM / RAG — Pipeline Build", items: [
+        { id: "d59", text: "PDF veya TXT dosyası yükle, PyPDFLoader ile oku" },
+        { id: "d60", text: "RecursiveCharacterTextSplitter ile chunk'lara böl (chunk_size=500)" },
+        { id: "d61", text: "OpenAIEmbeddings veya text-embedding-3-small ile embedding oluştur" },
+        { id: "d62", text: "ChromaDB vector store kur, embedding'leri persist et" },
+        { id: "d63", text: "Similarity search: query gir, en yakın 3 chunk'ı bul" },
+        { id: "d64", text: "RetrievalQA chain kur: query → retrieve → LLM → cevap" },
+        { id: "d65", text: "MLflow entegre et: query, retrieved chunks ve response'u logla" },
+        { id: "d66", text: "Tez verisini kullan: ürün önerileri veya persona açıklamalarını yükle" },
+      ]},
+      { title: "LLM / RAG — Polish & Deploy", items: [
+        { id: "d67", text: "Streamlit arayüzü yaz: input box, submit butonu, response alanı" },
+        { id: "d68", text: "Streamlit'e kaynak gösterimi ekle: hangi chunk kullanıldı göster" },
+        { id: "d69", text: "Error handling ekle: API hatası, boş query, timeout" },
+        { id: "d70", text: "requirements.txt oluştur, Docker ile containerize et" },
+        { id: "d71", text: "Azure Container Apps'e deploy et — az containerapp create" },
+        { id: "d72", text: "Mermaid mimarisi diyagramı çiz (README'ye ekle)" },
+        { id: "d73", text: "README.md yaz: problem, mimari, kurulum adımları, örnek sorular" },
+        { id: "d74", text: "LinkedIn paylaşımı için 3 cümlelik proje özeti yaz (İngilizce)" },
+        { id: "d75", text: "CV'ye projeyi ekle: 2 bullet — ne yaptın + hangi teknolojiyle" },
+      ]},
+    ]
+  }
+};
+
+// ── Init ──────────────────────────────────────────────────────
+load();
+render();
+</script>
+</body>
+</html>
