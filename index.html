@@ -114,6 +114,31 @@
   .todo-text { font-size: 13px; line-height: 1.5; color: var(--text); }
   .todo-text.checked { color: var(--muted); text-decoration: line-through; }
   .todo-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .user-desc { font-size: 12px; color: #a0a0a0; margin-top: 5px; line-height: 1.5; white-space: pre-wrap; }
+  .desc-textarea {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 8px; font-size: 12px; font-family: 'DM Sans', sans-serif;
+    resize: none; outline: none; margin-top: 6px; line-height: 1.5;
+    min-height: 60px;
+  }
+  .desc-textarea:focus { border-color: var(--dp100); }
+  .edit-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 13px; padding: 2px 4px; border-radius: 4px; flex-shrink: 0;
+    opacity: 0.6; transition: opacity 0.15s;
+  }
+  .edit-btn:active { opacity: 1; }
+  .desc-save-btn {
+    margin-top: 6px; padding: 5px 14px; border-radius: 6px; border: none;
+    background: var(--dp100); color: #000; font-size: 11px; font-weight: 700;
+    cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
+  .desc-cancel-btn {
+    margin-top: 6px; margin-left: 6px; padding: 5px 14px; border-radius: 6px;
+    border: 1px solid var(--border); background: none; color: var(--muted);
+    font-size: 11px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  }
 
   /* ── Empty state ── */
   .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
@@ -289,6 +314,7 @@ let syncKey = "";
 let saveTimer = null;
 let remoteListener = null;
 let ignoreRemote = false;
+let userDescs = {};  // { itemId: "user description" }
 
 const DEFAULT_META = {
   german: { label: "Almanca B2",       icon: "🇩🇪", color: "#f59e0b", cls: "german" },
@@ -329,7 +355,8 @@ function startRemoteListener() {
     const val = snap.val();
     if (!val) { pushToFirebase(); return; }
     if (val.data)    { data    = val.data;    try { localStorage.setItem("skt_data",    JSON.stringify(data));    } catch {} }
-    if (val.checked) { checked = val.checked; try { localStorage.setItem("skt_checked", JSON.stringify(checked)); } catch {} }
+    if (val.checked)   { checked   = val.checked;   try { localStorage.setItem("skt_checked", JSON.stringify(checked));   } catch {} }
+    if (val.userDescs) { userDescs = val.userDescs; try { localStorage.setItem("skt_descs",   JSON.stringify(userDescs)); } catch {} }
     if (!activeTrack || !data[activeTrack]) activeTrack = Object.keys(data)[0] || "german";
     render();
     setSyncStatus("synced");
@@ -340,7 +367,7 @@ function pushToFirebase() {
   if (!db || !syncKey) return;
   ignoreRemote = true;
   setSyncStatus("syncing");
-  db.ref(syncKey).set({ data, checked })
+  db.ref(syncKey).set({ data, checked, userDescs })
     .then(() => { setSyncStatus("synced"); })
     .catch(() => { setSyncStatus("offline"); })
     .finally(() => { setTimeout(() => { ignoreRemote = false; }, 300); });
@@ -350,6 +377,7 @@ function pushToFirebase() {
 function save() {
   try { localStorage.setItem("skt_data",    JSON.stringify(data));    } catch {}
   try { localStorage.setItem("skt_checked", JSON.stringify(checked)); } catch {}
+  try { localStorage.setItem("skt_descs",   JSON.stringify(userDescs)); } catch {}
   if (db && syncKey) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(pushToFirebase, 600);
@@ -359,6 +387,7 @@ function save() {
 function load() {
   try { const d = localStorage.getItem("skt_data");    if (d) data    = JSON.parse(d); } catch {}
   try { const c = localStorage.getItem("skt_checked"); if (c) checked = JSON.parse(c); } catch {}
+  try { const u = localStorage.getItem("skt_descs");   if (u) userDescs = JSON.parse(u); } catch {}
   if (!Object.keys(data).length) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
   activeTrack = Object.keys(data)[0] || "german";
   // Auto-reconnect if config was saved
@@ -426,16 +455,27 @@ function renderSections() {
     const items = isCol ? "" : sec.items.map((item, ii) => {
       const isChecked = !!checked[item.id];
       const chkCls = isChecked ? `checked-${cls}` : "";
-      return `<div class="todo-item ${chkCls}" onclick="toggleItem('${item.id}')">
-        <div class="checkbox ${chkCls}">
+      const desc = userDescs[item.id] || "";
+      const isEditing = editingId === item.id;
+      return `<div class="todo-item ${chkCls}" id="item-${item.id}">
+        <div class="checkbox ${chkCls}" onclick="toggleItem('${item.id}')">
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
             <path d="M1 4L3.5 6.5L9 1" stroke="#000" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </div>
-        <div style="flex:1">
+        <div style="flex:1" onclick="toggleItem('${item.id}')">
           <div class="todo-text ${isChecked ? 'checked' : ''}">${item.text}</div>
           ${item.note ? `<div class="todo-note">💡 ${item.note}</div>` : ""}
+          ${!isEditing && desc ? `<div class="user-desc">📝 ${desc}</div>` : ""}
+          ${isEditing ? `
+            <textarea class="desc-textarea" id="desc-${item.id}" onclick="event.stopPropagation()">${desc}</textarea>
+            <div onclick="event.stopPropagation()">
+              <button class="desc-save-btn" onclick="saveDesc('${item.id}')">Kaydet</button>
+              <button class="desc-cancel-btn" onclick="cancelEdit()">İptal</button>
+            </div>` : ""}
+          ${!isEditing && !desc ? `<div style="margin-top:4px;font-size:11px;color:var(--muted);opacity:0.5">📝 not ekle</div>` : ""}
         </div>
+        <button class="edit-btn" onclick="event.stopPropagation();startEdit('${item.id}')" title="Not ekle/düzenle">✏️</button>
       </div>`;
     }).join("");
 
@@ -448,6 +488,34 @@ function renderSections() {
       ${items}
     </div>`;
   }).join("");
+}
+
+// ── Description editing ───────────────────────────────────────
+let editingId = null;
+
+function startEdit(id) {
+  editingId = id;
+  renderSections();
+  setTimeout(() => {
+    const ta = document.getElementById("desc-" + id);
+    if (ta) { ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); }
+  }, 50);
+}
+
+function saveDesc(id) {
+  const ta = document.getElementById("desc-" + id);
+  if (!ta) return;
+  const val = ta.value.trim();
+  if (val) userDescs[id] = val;
+  else delete userDescs[id];
+  editingId = null;
+  save();
+  renderSections();
+}
+
+function cancelEdit() {
+  editingId = null;
+  renderSections();
 }
 
 function updateTestBtn() {
@@ -665,7 +733,11 @@ function submitFirebase() {
   const key    = document.getElementById("fbKey").value.trim();
   if (!key) { document.getElementById("fbError").textContent = "⚠ Sync key boş olamaz."; return; }
   let cfg;
-  try { cfg = JSON.parse(cfgRaw); } catch { document.getElementById("fbError").textContent = "⚠ Geçersiz JSON."; return; }
+  try {
+    // Accept both JS object syntax and JSON (auto-add quotes to unquoted keys)
+    const normalized = cfgRaw.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+    cfg = JSON.parse(normalized);
+  } catch { document.getElementById("fbError").textContent = "⚠ Geçersiz format — Firebase config'i olduğu gibi yapıştır."; return; }
   if (!cfg.databaseURL) { document.getElementById("fbError").textContent = "⚠ databaseURL eksik — Realtime Database aktif mi?"; return; }
   initFirebase(cfg, key);
   closeModal();
