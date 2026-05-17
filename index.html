@@ -280,11 +280,85 @@
   .compact .todo-note, .compact .user-desc { display:none; }
   .compact .section-header { padding:8px 14px; }
 
+  /* Daily plan */
+  .plan-section { margin-bottom: 16px; }
+  .plan-track-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .plan-item { display:flex; gap:10px; padding:10px 12px; background:var(--surface); border-radius:8px; margin-bottom:6px; border-left:3px solid var(--dp100); }
+  .plan-item.prio-high { border-left-color: #f87171; }
+  .plan-item.prio-med  { border-left-color: #f59e0b; }
+  .plan-item.prio-low  { border-left-color: #34d399; }
+  .plan-time { font-size:11px; font-family:"DM Mono",monospace; color:var(--muted); white-space:nowrap; padding-top:1px; }
+  .plan-text { font-size:13px; flex:1; line-height:1.5; }
+  .plan-total { font-size:12px; color:var(--muted); margin-top:12px; padding-top:12px; border-top:1px solid var(--border); font-family:"DM Mono",monospace; }
+  /* Coach tabs */
+  .coach-tabs { display:flex; gap:4px; margin-bottom:16px; background:var(--bg); border-radius:10px; padding:4px; }
+  .coach-tab { flex:1; padding:8px 4px; border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; border-radius:7px; font-family:"DM Sans",sans-serif; transition:all 0.15s; }
+  .coach-tab.active { background:var(--surface2); color:var(--text); }
+  /* Suggested tasks */
+  .suggested-item { display:flex; gap:10px; padding:10px 12px; background:var(--surface); border-radius:8px; margin-bottom:6px; border:1px solid var(--border); align-items:flex-start; }
+  .suggested-add-btn { background:none; border:1px solid var(--green); color:var(--green); border-radius:6px; padding:3px 8px; font-size:11px; cursor:pointer; font-family:"DM Sans",sans-serif; flex-shrink:0; }
+  .suggested-add-btn.added { background:var(--green); color:#000; border-color:var(--green); }
+
   /* Test selector */
   .section-check-row { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); cursor:pointer; }
   .section-check-row:last-child { border-bottom:none; }
   .section-check-label { flex:1; font-size:13px; }
   .section-check-count { font-size:11px; color:var(--muted); font-family:'DM Mono',monospace; }
+
+  /* Coach Panel */
+  .coach-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:200; display:flex; flex-direction:column; justify-content:flex-end; }
+  .coach-panel { background:var(--surface); border-radius:20px 20px 0 0; max-height:90vh; overflow-y:auto; padding-bottom:env(safe-area-inset-bottom); }
+  .coach-handle { width:36px; height:4px; background:var(--subtle); border-radius:2px; margin:12px auto 0; }
+  .coach-header { padding:14px 20px 10px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+  .coach-title { font-size:16px; font-weight:700; }
+  .coach-body { padding:16px 20px 24px; }
+  .coach-section { margin-bottom:20px; }
+  .coach-section-title { font-size:11px; font-weight:700; color:var(--muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; }
+  .plan-item { display:flex; gap:10px; padding:10px 12px; border-radius:10px; background:var(--bg); border:1px solid var(--border); margin-bottom:6px; }
+  .plan-item-left { display:flex; flex-direction:column; gap:2px; flex:1; }
+  .plan-item-track { font-size:10px; font-weight:700; padding:2px 6px; border-radius:10px; display:inline-block; width:fit-content; }
+  .plan-item-text { font-size:13px; color:var(--text); line-height:1.4; }
+  .plan-item-why { font-size:11px; color:var(--muted); margin-top:2px; }
+  .plan-item-dur { font-size:11px; font-family:'DM Mono',monospace; color:var(--muted); flex-shrink:0; padding-top:2px; }
+  .new-task-card { border:1px solid var(--border); border-radius:10px; margin-bottom:8px; overflow:hidden; }
+  .new-task-header { padding:10px 12px; background:var(--bg); display:flex; align-items:center; gap:8px; }
+  .new-task-items { padding:8px 12px 10px; }
+  .new-task-item { font-size:12px; color:var(--text); padding:3px 0; display:flex; gap:6px; }
+  .add-tasks-btn { margin-top:8px; padding:7px 14px; border-radius:8px; border:none; font-size:12px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif; }
+  .mini-test-q { padding:10px 0; border-bottom:1px solid var(--border); font-size:13px; line-height:1.6; }
+  .mini-test-q:last-child { border-bottom:none; }
+  .coach-loading { display:flex; flex-direction:column; align-items:center; gap:16px; padding:40px 20px; color:var(--muted); }
+  .coach-spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:#ec4899; border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* Password Gate */
+  .pw-overlay {
+    position:fixed; inset:0; background:#0f0f0f; z-index:9999;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:32px;
+  }
+  .pw-logo { font-size:52px; margin-bottom:8px; }
+  .pw-title { font-size:24px; font-weight:700; color:#f0f0f0; margin-bottom:4px; }
+  .pw-sub { font-size:13px; color:#666; margin-bottom:36px; }
+  .pw-dots { display:flex; gap:12px; margin-bottom:28px; }
+  .pw-dot { width:14px; height:14px; border-radius:50%; border:2px solid #444; transition:all 0.15s; }
+  .pw-dot.filled { background:#ec4899; border-color:#ec4899; }
+  .pw-dot.error { background:#f87171; border-color:#f87171; animation:shake 0.3s; }
+  .pw-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:280px; }
+  .pw-btn {
+    aspect-ratio:1; border-radius:50%; border:1px solid #2a2a2a; background:#1a1a1a;
+    color:#f0f0f0; font-size:22px; font-weight:600; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition:background 0.1s; font-family:'DM Sans',sans-serif;
+  }
+  .pw-btn:active { background:#333; }
+  .pw-btn.del { font-size:18px; color:#666; }
+  .pw-btn.empty { opacity:0; pointer-events:none; }
+  .pw-hint { font-size:12px; color:#555; margin-top:20px; text-align:center; }
+  .pw-set-label { font-size:13px; color:#ec4899; font-weight:600; margin-bottom:24px; }
+  @keyframes shake {
+    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  }
 </style>
 </head>
 <body>
@@ -300,11 +374,41 @@
   <div style="display:flex;align-items:center;gap:8px">
     <div class="streak-badge" id="streakBadge">🔥 0</div>
     <button class="icon-btn" onclick="toggleCompact()" id="compactBtn" title="Kompakt Mod">⊟</button>
+    <button class="icon-btn" onclick="openModal('apikey')" title="API Ayarları">🔑</button>
     <button class="icon-btn" onclick="openModal('firebase')" title="Firebase Sync">☁</button>
     <button class="icon-btn" onclick="openModal('format')" title="JSON Formatı">?</button>
     <button class="icon-btn" onclick="openModal('import')" title="JSON Yükle">+</button>
     <button class="icon-btn" onclick="exportData()" title="Tümünü Dışa Aktar">↓</button>
   </div>
+</div>
+
+
+<!-- Password Gate -->
+<div id="pwOverlay" class="pw-overlay">
+  <div class="pw-logo">🧠</div>
+  <div class="pw-title">Skill Tracker</div>
+  <div class="pw-sub" id="pwSub">Kişisel Öğrenme Koçu</div>
+  <div class="pw-set-label" id="pwSetLabel" style="display:none">Yeni PIN belirle (6 rakam)</div>
+  <div class="pw-dots" id="pwDots">
+    <div class="pw-dot" id="d0"></div><div class="pw-dot" id="d1"></div>
+    <div class="pw-dot" id="d2"></div><div class="pw-dot" id="d3"></div>
+    <div class="pw-dot" id="d4"></div><div class="pw-dot" id="d5"></div>
+  </div>
+  <div class="pw-pad">
+    <button class="pw-btn" onclick="pwPress(1)">1</button>
+    <button class="pw-btn" onclick="pwPress(2)">2</button>
+    <button class="pw-btn" onclick="pwPress(3)">3</button>
+    <button class="pw-btn" onclick="pwPress(4)">4</button>
+    <button class="pw-btn" onclick="pwPress(5)">5</button>
+    <button class="pw-btn" onclick="pwPress(6)">6</button>
+    <button class="pw-btn" onclick="pwPress(7)">7</button>
+    <button class="pw-btn" onclick="pwPress(8)">8</button>
+    <button class="pw-btn" onclick="pwPress(9)">9</button>
+    <button class="pw-btn empty"></button>
+    <button class="pw-btn" onclick="pwPress(0)">0</button>
+    <button class="pw-btn del" onclick="pwDel()">⌫</button>
+  </div>
+  <div class="pw-hint" id="pwHint"></div>
 </div>
 
 <div class="track-tabs" id="trackTabs"></div>
@@ -319,9 +423,25 @@
     <button class="pomo-btn" onclick="resetPomo()" title="Sıfırla">↺</button>
   </div>
   <div style="display:flex;gap:8px;width:100%">
-    <button class="test-btn" id="exportCheckedBtn" onclick="openTestSelector()">Test Oluştur</button>
-    <button class="test-btn" id="exportCheckedJsonBtn" onclick="exportChecked()" style="flex:0;padding:13px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border);">📋 Kopyala</button>
-    <button class="test-btn" onclick="exportCheckedJson()" style="flex:0;padding:13px 16px;background:var(--surface);color:var(--text);border:1px solid var(--border);">↓ JSON</button>
+    <button class="test-btn" id="exportCheckedBtn" onclick="openCoach('plan')" style="background:var(--green);color:#000;font-size:13px;">🧠 Koç</button>
+    <button class="test-btn" onclick="openCoach('test')" style="flex:0.8;font-size:13px;">🧪 Test</button>
+    <button class="test-btn" onclick="exportChecked()" style="flex:0;padding:13px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);">📋</button>
+    <button class="test-btn" onclick="exportCheckedJson()" style="flex:0;padding:13px 14px;background:var(--surface);color:var(--text);border:1px solid var(--border);">↓</button>
+  </div>
+</div>
+
+
+<!-- Coach Panel -->
+<div id="coachOverlay" class="coach-overlay" style="display:none" onclick="closeCoach()">
+  <div class="coach-panel" onclick="event.stopPropagation()">
+    <div class="coach-handle"></div>
+    <div class="coach-header">
+      <span class="coach-title">🎯 Kişisel Koç</span>
+      <button onclick="closeCoach()" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div class="coach-body" id="coachBody">
+      <div class="coach-loading"><div class="coach-spinner"></div><span>Analiz ediliyor...</span></div>
+    </div>
   </div>
 </div>
 
@@ -337,6 +457,125 @@
   </div>
 </div>
 
+
+// ── Password Gate ─────────────────────────────────────────────
+let pwBuffer = "";
+let pwMode = "check"; // "check" | "set" | "confirm"
+let pwFirst = "";
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str + "skt_v1"));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+
+async function pwInit() {
+  // Already authenticated this session?
+  if (sessionStorage.getItem("skt_auth") === "ok") { pwUnlock(); return; }
+  const stored = localStorage.getItem("skt_pin_hash");
+  if (!stored) {
+    pwMode = "set";
+    document.getElementById("pwSetLabel").style.display = "block";
+    document.getElementById("pwSub").textContent = "İlk kullanım — PIN oluştur";
+  }
+}
+
+function pwPress(n) {
+  if (pwBuffer.length >= 6) return;
+  pwBuffer += n;
+  pwUpdateDots();
+  if (pwBuffer.length === 6) setTimeout(pwSubmit, 100);
+}
+
+function pwDel() {
+  pwBuffer = pwBuffer.slice(0, -1);
+  pwUpdateDots();
+  // Clear any error dots
+  for (let i=0;i<6;i++) document.getElementById("d"+i)?.classList.remove("error");
+}
+
+function pwUpdateDots(error=false) {
+  for (let i=0;i<6;i++) {
+    const d = document.getElementById("d"+i);
+    if (!d) continue;
+    d.className = "pw-dot" + (i < pwBuffer.length ? (error ? " error" : " filled") : "");
+  }
+}
+
+async function pwSubmit() {
+  const stored = localStorage.getItem("skt_pin_hash");
+
+  if (pwMode === "set") {
+    pwFirst = pwBuffer;
+    pwBuffer = "";
+    pwMode = "confirm";
+    document.getElementById("pwSetLabel").textContent = "PIN'i tekrar gir";
+    document.getElementById("pwSub").textContent = "Doğrulama";
+    pwUpdateDots();
+    return;
+  }
+
+  if (pwMode === "confirm") {
+    if (pwBuffer !== pwFirst) {
+      pwError("PIN'ler eşleşmedi, tekrar dene");
+      pwMode = "set"; pwFirst = "";
+      document.getElementById("pwSetLabel").textContent = "Yeni PIN belirle (6 rakam)";
+      document.getElementById("pwSub").textContent = "İlk kullanım — PIN oluştur";
+      return;
+    }
+    const hash = await sha256(pwBuffer);
+    localStorage.setItem("skt_pin_hash", hash);
+    sessionStorage.setItem("skt_auth", "ok");
+    pwUnlock();
+    return;
+  }
+
+  // Check mode
+  const hash = await sha256(pwBuffer);
+  if (hash === stored) {
+    sessionStorage.setItem("skt_auth", "ok");
+    pwUnlock();
+  } else {
+    pwError("Yanlış PIN");
+  }
+}
+
+function pwError(msg) {
+  pwUpdateDots(true);
+  document.getElementById("pwHint").textContent = msg;
+  document.getElementById("pwHint").style.color = "#f87171";
+  setTimeout(() => {
+    pwBuffer = "";
+    pwUpdateDots();
+    document.getElementById("pwHint").textContent = "";
+  }, 900);
+}
+
+function pwUnlock() {
+  const ov = document.getElementById("pwOverlay");
+  ov.style.transition = "opacity 0.3s";
+  ov.style.opacity = "0";
+  setTimeout(() => { ov.style.display = "none"; }, 300);
+}
+
+// Allow PIN reset via long-press on title (for recovery)
+document.addEventListener("DOMContentLoaded", () => {
+  let pressTimer;
+  const title = document.querySelector(".pw-title");
+  if (title) {
+    title.addEventListener("pointerdown", () => {
+      pressTimer = setTimeout(() => {
+        if (confirm("PIN'i sıfırla? Yeni PIN oluşturman gerekecek.")) {
+          localStorage.removeItem("skt_pin_hash");
+          sessionStorage.removeItem("skt_auth");
+          location.reload();
+        }
+      }, 3000);
+    });
+    title.addEventListener("pointerup", () => clearTimeout(pressTimer));
+  }
+  pwInit();
+});
+
 <script>
 // ── State ────────────────────────────────────────────────────
 let data = {};
@@ -351,6 +590,7 @@ let userDescs = {};
 let streak = 0;
 let lastActiveDate = "";
 let compactMode = false;
+let openaiKey = "";
 let pomoSeconds = 25 * 60;
 let pomoRunning = false;
 let pomoInterval = null;
@@ -433,6 +673,7 @@ function load() {
   try { streak = parseInt(localStorage.getItem("skt_streak") || "0"); } catch {}
   try { lastActiveDate = localStorage.getItem("skt_last_date") || ""; } catch {}
   try { compactMode = localStorage.getItem("skt_compact") === "true"; } catch {}
+  try { openaiKey = localStorage.getItem("skt_oai_key") || ""; } catch {}
   if (!Object.keys(data).length) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
   activeTrack = Object.keys(data)[0] || "german";
   // Auto-reconnect if config was saved
@@ -732,7 +973,34 @@ function showToastMsg(msg) {
 }
 
 // ── Test Selector ─────────────────────────────────────────────
-function openTestSelector() {
+function openTestSelector() { openCoach("test"); }
+
+function openTestSelectorModal() {
+  const t = data[activeTrack];
+  const m = t?.meta || DEFAULT_META[activeTrack] || {};
+  if (!t?.sections?.length) { alert("Bu track boş."); return; }
+  const overlay = document.getElementById("modalOverlay");
+  document.getElementById("modalTitle").textContent = `${m.icon} Test Konularını Seç`;
+  document.getElementById("modalBody").innerHTML = `
+    <p class="hint" style="margin-bottom:12px">Hangi bölümlerden test oluşturulsun?</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="selectAllSections(true)" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Tümünü Seç</button>
+      <button onclick="selectAllSections(false)" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Hiçbirini Seçme</button>
+    </div>
+    <div id="sectionCheckList">
+    ${t.sections.map((sec, si) => {
+      const cnt = sec.items.filter(i => checked[i.id]).length;
+      return `<label class="section-check-row">
+        <input type="checkbox" id="sec_${si}" ${cnt > 0 ? "checked" : ""} style="accent-color:${m.color || "#818cf8"}">
+        <span class="section-check-label">${sec.title}</span>
+        <span class="section-check-count">${cnt}/${sec.items.length} tikli</span>
+      </label>`;
+    }).join("")}
+    </div>
+    <button class="apply-btn" style="background:${m.color||'#818cf8'}" onclick="runTestFromSelector()">Test Oluştur</button>`;
+  overlay.style.display = "flex";
+}
+function _oldTestSelector() {
   const t = data[activeTrack];
   const m = t?.meta || DEFAULT_META[activeTrack] || {};
   if (!t?.sections?.length) { alert("Bu track boş."); return; }
@@ -798,16 +1066,228 @@ async function runTestFromSelector() {
   const list = done.join("\n");
   const prompt = isGerman
     ? `Almanca öğrencisi şu konuları tamamladı:\n${list}\n\n8 soruluk test oluştur. 3 çoktan seçmeli (4 şık, doğrusu işaretli), 3 boşluk doldurma, 2 cümle yazma görevi. Türkçe açıklamalı, Almanca pratikli. Her sorudan sonra kısa kural hatırlatması ekle.`
-    : `Student completed:\n${list}\n\nGenerate 8 technical questions: 3 multiple choice (mark correct), 3 short answer, 2 code/practical tasks. Brief explanation after each answer.`;
+    : `Student completed:\n${list}\n\nGenerate 8 technical questions: 3 multiple choice (mark correct answer), 3 short answer, 2 code/practical tasks. Brief explanation after each answer.`;
 
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method:"POST", headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1000, messages:[{role:"user",content:prompt}] })
+    const text = await callOpenAI(prompt, false);
+    bodyEl.textContent = text;
+  } catch(e) { bodyEl.textContent = "Hata: " + e.message + "\n\nAPI key doğru mu? 🔑 butonundan kontrol et."; }
+}
+
+
+// ── OpenAI API helper ─────────────────────────────────────────
+async function callOpenAI(messagesOrStr, jsonMode = false) {
+  if (!openaiKey) { openModal("apikey"); throw new Error("API key yok — 🔑 butonundan gir"); }
+  const messages = typeof messagesOrStr === "string"
+    ? [{ role: "user", content: messagesOrStr }]
+    : messagesOrStr;
+  const body = {
+    model: "gpt-4o-mini",
+    messages,
+    max_tokens: 1500,
+    ...(jsonMode ? { response_format: { type: "json_object" } } : {})
+  };
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+    body: JSON.stringify(body)
+  });
+  const d = await res.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.choices[0].message.content;
+}
+
+// ── Build tracker context for AI ─────────────────────────────
+function buildContext() {
+  const lines = [`Tarih: ${new Date().toLocaleDateString("tr-TR", {weekday:"long",day:"numeric",month:"long"})}`, `Streak: ${streak} gün`];
+  for (const [tid, t] of Object.entries(data)) {
+    const m = t.meta || {};
+    const allIt = (t.sections || []).flatMap(s => s.items);
+    const done = allIt.filter(i => checked[i.id]);
+    lines.push(`\n[${m.icon} ${m.label}] ${done.length}/${allIt.length} tamamlandı (${Math.round(done.length/Math.max(allIt.length,1)*100)}%)`);
+    // Weakest sections
+    const weak = (t.sections || [])
+      .map(s => ({ title: s.title, done: s.items.filter(i=>checked[i.id]).length, total: s.items.length }))
+      .filter(s => s.total > 0 && s.done/s.total < 0.3)
+      .slice(0, 3);
+    if (weak.length) lines.push(`  Zayıf bölümler: ${weak.map(s=>`"${s.title}" (${s.done}/${s.total})`).join(", ")}`);
+    // Recently ticked
+    const recent = done.slice(-3).map(i => `"${i.text.slice(0,50)}"`);
+    if (recent.length) lines.push(`  Son tiklenenler: ${recent.join(", ")}`);
+    // Next 5 unticked
+    const next = allIt.filter(i => !checked[i.id]).slice(0, 5).map(i => `{id:"${i.id}", text:"${i.text.slice(0,60)}", section:"${(t.sections||[]).find(s=>s.items.some(it=>it.id===i.id))?.title||""}"}`);
+    if (next.length) lines.push(`  Sıradaki görevler: ${next.join(", ")}`);
+  }
+  return lines.join("\n");
+}
+
+// ── Coach Panel ───────────────────────────────────────────────
+async function openCoach(mode = "plan") {
+  if (!openaiKey) { openModal("apikey"); return; }
+  if (mode === "test") { openTestSelectorModal(); return; }
+  document.getElementById("coachOverlay").style.display = "flex";
+  document.getElementById("coachBody").innerHTML = `<div class="coach-loading"><div class="coach-spinner"></div><span>Analiz ediliyor, plan hazırlanıyor...</span></div>`;
+
+  const ctx = buildContext();
+  const systemPrompt = `Sen Tarik'in kişisel öğrenme koçusun. Tarik TU Münih'te Management & Technology yüksek lisansı yapıyor (Eylül 2026 mezuniyet), Rohde & Schwarz'da PMO çalışıyor ve aktif iş arıyor. Almanca, AI/ML, System Design ve Defense AI alanlarında kendini geliştiriyor. Türkçe konuş, samimi ve motive edici ol ama gerçekçi ol.`;
+
+  const userPrompt = `Mevcut durum:
+${ctx}
+
+Bana şunu ver (JSON formatında):
+{
+  "motivation": "1-2 cümle kişisel motivasyon mesajı",
+  "plan": [
+    {"track":"track_id", "task_id":"madde_id veya boş", "task":"yapılacak iş", "duration":"15 dk", "why":"neden bu öncelikli"}
+  ],
+  "new_tasks": [
+    {"track":"track_id", "section":"bölüm adı", "items":[{"id":"yeni_uid", "text":"görev metni", "note":"ipucu"}]}
+  ],
+  "mini_test": {
+    "topic": "konu adı",
+    "questions": ["soru1", "soru2", "soru3"]
+  }
+}
+
+Plan toplam ~60 dakika olsun. Zayıf alanlara öncelik ver. new_tasks sadece gerçek bir boşluk varsa ekle, yoksa boş array. mini_test en zayıf konudan 3 soru.`;
+
+  try {
+    const raw = await callOpenAI([
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt }
+    ], true);
+
+    let coach;
+    try { coach = JSON.parse(raw); } catch { throw new Error("JSON parse hatası"); }
+    renderCoach(coach);
+  } catch(e) {
+    document.getElementById("coachBody").innerHTML = `<p style="color:var(--red);padding:20px">${e.message}</p>`;
+  }
+}
+
+function renderCoach(coach) {
+  const trackColors = {};
+  for (const [tid, t] of Object.entries(data)) trackColors[tid] = t.meta?.color || "#818cf8";
+
+  let html = "";
+
+  // Motivation
+  if (coach.motivation) {
+    html += `<div style="padding:12px 16px;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.3);border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text)">${coach.motivation}</div>`;
+  }
+
+  // Daily Plan
+  if (coach.plan?.length) {
+    html += `<div class="coach-section"><div class="coach-section-title">⏱ Bugünün 1 Saatlik Planı</div>`;
+    let total = 0;
+    coach.plan.forEach(item => {
+      const mins = parseInt(item.duration) || 15;
+      total += mins;
+      const color = trackColors[item.track] || "#818cf8";
+      const trackMeta = data[item.track]?.meta || {};
+      html += `<div class="plan-item">
+        <div class="plan-item-left">
+          <span class="plan-item-track" style="background:${color}20;color:${color}">${trackMeta.icon||""} ${trackMeta.label||item.track}</span>
+          <span class="plan-item-text">${item.task}</span>
+          <span class="plan-item-why">${item.why||""}</span>
+        </div>
+        <span class="plan-item-dur">${item.duration}</span>
+      </div>`;
     });
-    const d = await res.json();
-    bodyEl.textContent = d.content?.map(b=>b.text||"").join("") || "Yanıt alınamadı.";
-  } catch(e) { bodyEl.textContent = "Bağlantı hatası: " + e.message; }
+    html += `<div style="text-align:right;font-size:11px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace">Toplam: ~${total} dk</div></div>`;
+  }
+
+  // New Tasks
+  if (coach.new_tasks?.length) {
+    html += `<div class="coach-section"><div class="coach-section-title">✨ Önerilen Yeni Görevler</div>`;
+    coach.new_tasks.forEach((group, gi) => {
+      const color = trackColors[group.track] || "#818cf8";
+      const trackMeta = data[group.track]?.meta || {};
+      const itemsHtml = (group.items||[]).map(it =>
+        `<div class="new-task-item"><span style="color:${color}">›</span> ${it.text}</div>`
+      ).join("");
+      html += `<div class="new-task-card">
+        <div class="new-task-header">
+          <span style="font-size:13px;font-weight:700">${trackMeta.icon||""} ${group.section}</span>
+          <span style="font-size:11px;color:var(--muted)">${group.items?.length||0} görev</span>
+        </div>
+        <div class="new-task-items">${itemsHtml}
+          <button class="add-tasks-btn" style="background:${color};color:#000" onclick="addCoachTasks(${gi})">+ Listeye Ekle</button>
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+    // Store new_tasks for addCoachTasks
+    window._coachNewTasks = coach.new_tasks;
+  }
+
+  // Mini Test
+  if (coach.mini_test?.questions?.length) {
+    html += `<div class="coach-section"><div class="coach-section-title">📝 Mini Test — ${coach.mini_test.topic}</div>`;
+    coach.mini_test.questions.forEach((q, qi) => {
+      html += `<div class="mini-test-q"><strong>${qi+1}.</strong> ${q}</div>`;
+    });
+    html += `<button class="apply-btn" style="margin-top:12px" onclick="expandTest('${(coach.mini_test.topic||"").replace(/'/g,"\'")}')">Bu konudan tam test oluştur →</button>`;
+    html += `</div>`;
+  }
+
+  document.getElementById("coachBody").innerHTML = html;
+}
+
+function addCoachTasks(idx) {
+  const group = window._coachNewTasks?.[idx];
+  if (!group) return;
+  const err = applyJson(JSON.stringify(group), "merge");
+  if (err) { alert("Hata: " + err); return; }
+  showToastMsg(`✓ ${group.items?.length||0} görev eklendi`);
+  // Disable button
+  const btns = document.querySelectorAll(".add-tasks-btn");
+  if (btns[idx]) { btns[idx].textContent = "✓ Eklendi"; btns[idx].disabled = true; btns[idx].style.opacity = "0.5"; }
+}
+
+async function expandTest(topic) {
+  closeCoach();
+  // find active track items on this topic
+  const t = data[activeTrack];
+  const allItems = (t?.sections||[]).flatMap(s => s.items);
+  const done = allItems.filter(i => checked[i.id]).map(i => i.text);
+  if (!done.length) { alert("Bu track'te tiklenmiş madde yok."); return; }
+
+  const isGerman = activeTrack === "german";
+  const list = done.slice(0, 20).join("\n");
+  const prompt = isGerman
+    ? `"${topic}" konusunu içeren Almanca öğrencisi için 8 soruluk test yaz. 3 çoktan seçmeli, 3 boşluk doldurma, 2 cümle yazma. Türkçe açıklamalı. Tamamlanan konular:\n${list}`
+    : `Topic: "${topic}". Generate 8 technical test questions based on: 3 multiple choice, 3 short answer, 2 practical. Completed topics:\n${list}`;
+
+  const testOut = document.getElementById("testOutput") || createTestOutput();
+  testOut.style.display = "block";
+  document.getElementById("testTitle").textContent = `📝 ${topic}`;
+  document.getElementById("testBody").innerHTML = `<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>`;
+  testOut.scrollIntoView({behavior:"smooth"});
+
+  try {
+    const ans = await callOpenAI([{role:"user", content:prompt}]);
+    document.getElementById("testBody").textContent = ans;
+  } catch(e) {
+    document.getElementById("testBody").textContent = "Hata: " + e.message;
+  }
+}
+
+function createTestOutput() {
+  const el = document.createElement("div"); el.id = "testOutput"; el.className = "test-output";
+  const hdr = document.createElement("div"); hdr.className = "test-header";
+  const title = document.createElement("span"); title.id = "testTitle";
+  const cls = document.createElement("button"); cls.className = "test-close-btn"; cls.textContent = "✕";
+  cls.onclick = () => el.style.display = "none";
+  hdr.append(title, cls);
+  const body = document.createElement("div"); body.id = "testBody"; body.className = "test-body";
+  el.append(hdr, body);
+  document.getElementById("sectionsContainer").after(el);
+  return el;
+}
+
+function closeCoach() {
+  document.getElementById("coachOverlay").style.display = "none";
 }
 
 // ── Modals ────────────────────────────────────────────────────
@@ -830,6 +1310,17 @@ function openModal(type) {
       <textarea id="jsonInput" rows="9" placeholder='{"track":"german","section":"Yeni Konu","items":[{"id":"x01","text":"..."}]}'></textarea>
       <div id="jsonError" class="error-msg"></div>
       <button class="apply-btn" onclick="submitJson()">Uygula</button>`;
+  }
+
+  if (type === "apikey") {
+    title.textContent = "🔑 OpenAI API Key";
+    body.innerHTML = `
+      <div class="settings-row">
+        <label class="settings-label">OpenAI API Key ("Bugün Ne Yapayım?" özelliği için)</label>
+        <input type="password" id="oaiKeyInput" placeholder="sk-..." value="${openaiKey}" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:'DM Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+        <p class="hint" style="margin-top:8px">platform.openai.com → API Keys → Create new secret key. GPT-4o-mini kullanılır, çok ucuz (~100 koç oturumu için $0.10).</p>
+      </div>
+      <button class="apply-btn" onclick="saveOpenAIKey()">Kaydet</button>`;
   }
 
   if (type === "firebase") {
@@ -928,12 +1419,215 @@ function submitFirebase() {
   closeModal();
 }
 
+function saveOpenAIKey() {
+  openaiKey = document.getElementById("oaiKeyInput").value.trim();
+  try { localStorage.setItem("skt_openai_key", openaiKey); } catch {}
+  closeModal();
+  showToastMsg("✓ API key kaydedildi");
+}
+
 function disconnectFirebase() {
   if (remoteListener) { db.ref(syncKey).off(); }
   db = null; syncKey = "";
   try { localStorage.removeItem("skt_fb_config"); localStorage.removeItem("skt_fb_key"); } catch {}
   setSyncStatus("nokey");
   closeModal();
+}
+
+// ── API Key modal ─────────────────────────────────────────────
+// (handled inside openModal)
+
+// ── Coach (tabbed) ────────────────────────────────────────────
+function buildSnapshot() {
+  return Object.entries(data).map(([tid, t]) => {
+    const m = t.meta || {};
+    const sections = (t.sections || []).map(sec => {
+      const total = sec.items.length;
+      const done  = sec.items.filter(i => checked[i.id]).length;
+      const undone = sec.items.filter(i => !checked[i.id]).slice(0, 3).map(i => i.text);
+      return { section: sec.title, done, total, nextItems: undone };
+    });
+    return { track: m.label || tid, sections };
+  });
+}
+
+function coachTabsHTML(active) {
+  const tabs = [["plan","📅 Günlük Plan"],["new","➕ Yeni Görev"],["test","🧪 Test"]];
+  return `<div class="coach-tabs">${tabs.map(([id, label]) =>
+    `<button class="coach-tab ${active===id?'active':''}" onclick="switchCoachTab('${id}')">${label}</button>`
+  ).join("")}</div>`;
+}
+
+let coachTab = "plan";
+function switchCoachTab(tab) {
+  coachTab = tab;
+  openCoach(tab, false);
+}
+
+function openCoach(tab = "plan", showOverlay = true) {
+  if (!openaiKey) { openModal("apikey"); return; }
+  coachTab = tab;
+  const overlay = document.getElementById("modalOverlay");
+  document.getElementById("modalTitle").textContent = "🧠 Koç";
+  if (showOverlay) overlay.style.display = "flex";
+
+  if (tab === "plan") renderPlanTab();
+  else if (tab === "new") renderNewTaskTab();
+  else if (tab === "test") renderTestTab();
+}
+
+// ── Plan tab ──────────────────────────────────────────────────
+async function renderPlanTab() {
+  document.getElementById("modalBody").innerHTML = coachTabsHTML("plan") + `
+    <div style="display:flex;gap:6px;justify-content:center;padding:24px">
+      <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
+    </div>`;
+
+  const snapshot = buildSnapshot();
+  const prompt = `Sen bir kişisel öğrenme koçusun. Öğrencinin ilerleme durumuna bakarak bugün için ~60 dakikalık plan yap.
+
+İlerleme:
+${JSON.stringify(snapshot, null, 2)}
+Streak: ${streak} gün
+
+Kurallar:
+- Toplam süre 55-65 dakika
+- Her madde için gerçekçi süre (5-20dk)
+- En geride kalan alana öncelik ver
+- Her madde için 1 cümle açıklama
+- Türkçe, JSON formatında döndür, başka hiçbir şey yazma:
+
+{"gunSozu":"Motive edici kısa cümle","planlar":[{"track":"Track adı","konu":"Yapılacak madde","sure":15,"oncelik":"yüksek|orta|düşük","aciklama":"Açıklama"}]}`;
+
+  try {
+    const plan = await callOpenAI(prompt, true);
+    const total = (plan.planlar||[]).reduce((a,p)=>a+p.sure,0);
+    const pc = {"yüksek":"prio-high","orta":"prio-med","düşük":"prio-low"};
+    const items = (plan.planlar||[]).map(p=>`
+      <div class="plan-item ${pc[p.oncelik]||''}">
+        <span class="plan-time">${p.sure}dk</span>
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${p.track}</div>
+          <div><strong style="font-size:13px">${p.konu}</strong></div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">${p.aciklama}</div>
+        </div>
+      </div>`).join("");
+    document.getElementById("modalBody").innerHTML = coachTabsHTML("plan") +
+      (plan.gunSozu?`<div style="font-size:13px;color:var(--green);margin-bottom:14px;font-style:italic">"${plan.gunSozu}"</div>`:"") +
+      items +
+      `<div class="plan-total">Toplam: ${total}dk · ${(plan.planlar||[]).length} madde</div>
+       <button class="apply-btn" style="margin-top:12px" onclick="closeModal()">Hadi Başlayalım 💪</button>`;
+  } catch(e) {
+    document.getElementById("modalBody").innerHTML = coachTabsHTML("plan") +
+      `<p style="color:var(--red);font-size:13px">Hata: ${e.message}</p>`;
+  }
+}
+
+// ── New Task tab ──────────────────────────────────────────────
+async function renderNewTaskTab() {
+  document.getElementById("modalBody").innerHTML = coachTabsHTML("new") + `
+    <p class="hint" style="margin-bottom:14px">Zayıf alanlar analiz ediliyor, yeni görevler öneriliyor...</p>
+    <div style="display:flex;gap:6px;justify-content:center;padding:20px">
+      <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>
+    </div>`;
+
+  const snapshot = buildSnapshot();
+  const prompt = `Sen bir kişisel öğrenme koçusun. Öğrencinin ilerleme durumuna bak. En eksik 2-3 alanda somut, detaylı yeni görevler öner. Mevcut görevlere ek olarak derinleştirici görevler olsun.
+
+İlerleme:
+${JSON.stringify(snapshot, null, 2)}
+
+Kurallar:
+- Her önerilen görev somut ve yapılabilir olsun (30-60dk max)
+- Mevcut görevlerin tekrarı olmasın
+- Türkçe
+- JSON formatında döndür, başka hiçbir şey yazma:
+
+{"analiz":"Neden bu görevleri öneriyorum","oneriler":[{"track":"track_id","bolum":"Bölüm adı","id":"yeni_id_001","metin":"Görev açıklaması","not":"İpucu veya kaynak"}]}
+
+track_id değerleri: ${Object.keys(data).join(", ")}`;
+
+  try {
+    const result = await callOpenAI(prompt, true);
+    const items = (result.oneriler||[]);
+    if (!items.length) { document.getElementById("modalBody").innerHTML = coachTabsHTML("new") + "<p>Öneri bulunamadı.</p>"; return; }
+
+    const rows = items.map((item, idx) => `
+      <div class="suggested-item" id="sug_${idx}">
+        <div style="flex:1">
+          <div style="font-size:10px;color:var(--muted);margin-bottom:3px">${item.track} · ${item.bolum}</div>
+          <div style="font-size:13px;font-weight:500">${item.metin}</div>
+          ${item.not?`<div style="font-size:11px;color:var(--muted);margin-top:3px">💡 ${item.not}</div>`:""}
+        </div>
+        <button class="suggested-add-btn" id="addbtn_${idx}" onclick="addSuggestedTask(${idx}, '${item.track}', '${item.bolum.replace(/'/g,"\'")}', '${item.id}', \`${item.metin.replace(/`/g,"\`")}\`, '${(item.not||"").replace(/'/g,"\'")}')">+ Ekle</button>
+      </div>`).join("");
+
+    document.getElementById("modalBody").innerHTML = coachTabsHTML("new") +
+      `<p style="font-size:12px;color:var(--muted);margin-bottom:12px;font-style:italic">${result.analiz||""}</p>` +
+      rows +
+      `<button class="apply-btn" style="margin-top:12px;background:#34d399" onclick="addAllSuggested(${JSON.stringify(items).replace(/"/g,'&quot;')})">Tümünü Ekle</button>`;
+  } catch(e) {
+    document.getElementById("modalBody").innerHTML = coachTabsHTML("new") +
+      `<p style="color:var(--red);font-size:13px">Hata: ${e.message}</p>`;
+  }
+}
+
+function addSuggestedTask(idx, tid, bolum, id, metin, not) {
+  const item = { id: id + "_" + Date.now(), text: metin, note: not || undefined };
+  if (!data[tid]) return;
+  let sec = data[tid].sections.find(s => s.title === bolum);
+  if (!sec) { sec = { title: bolum, items: [] }; data[tid].sections.push(sec); }
+  if (!sec.items.find(i => i.text === metin)) sec.items.push(item);
+  save(); render();
+  const btn = document.getElementById("addbtn_" + idx);
+  if (btn) { btn.textContent = "✓ Eklendi"; btn.className = "suggested-add-btn added"; btn.disabled = true; }
+  showToastMsg("✓ Görev eklendi!");
+}
+
+function addAllSuggested(items) {
+  items.forEach((item, idx) => addSuggestedTask(idx, item.track, item.bolum, item.id, item.metin, item.not));
+}
+
+// ── Test tab ──────────────────────────────────────────────────
+function renderTestTab() {
+  const t = data[activeTrack];
+  const m = t?.meta || DEFAULT_META[activeTrack] || {};
+  if (!t?.sections?.length) {
+    document.getElementById("modalBody").innerHTML = coachTabsHTML("test") + "<p>Bu track boş.</p>";
+    return;
+  }
+  document.getElementById("modalBody").innerHTML = coachTabsHTML("test") + `
+    <p class="hint" style="margin-bottom:12px">Hangi bölümlerden test oluşturulsun?</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button onclick="selectAllSections(true)" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Tümünü Seç</button>
+      <button onclick="selectAllSections(false)" style="font-size:12px;padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text);cursor:pointer">Hiçbirini Seçme</button>
+    </div>
+    <div id="sectionCheckList">
+    ${t.sections.map((sec, si) => {
+      const cnt = sec.items.filter(i => checked[i.id]).length;
+      return `<label class="section-check-row">
+        <input type="checkbox" id="sec_${si}" ${cnt > 0 ? 'checked' : ''} style="accent-color:${m.color||'#818cf8'}">
+        <span class="section-check-label">${sec.title}</span>
+        <span class="section-check-count">${cnt}/${sec.items.length} tikli</span>
+      </label>`;
+    }).join("")}
+    </div>
+    <button class="apply-btn" style="background:${m.color||'#818cf8'};margin-top:12px" onclick="runTestFromSelector()">Test Oluştur</button>`;
+}
+
+// ── OpenAI helper ─────────────────────────────────────────────
+async function callOpenAI(prompt, json = false) {
+  const body = { model:"gpt-4o-mini", messages:[{role:"user",content:prompt}], max_tokens:1400, temperature:0.7 };
+  if (json) body.response_format = { type:"json_object" };
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${openaiKey}`},
+    body: JSON.stringify(body)
+  });
+  const d = await res.json();
+  if (d.error) throw new Error(d.error.message);
+  const text = d.choices[0].message.content;
+  return json ? JSON.parse(text) : text;
 }
 
 function closeModal() {
