@@ -695,10 +695,36 @@ function buildFirebaseModal(body) {
 function submitFirebase() {
   const raw = document.getElementById("fbCfg").value.trim();
   const key = document.getElementById("fbKey").value.trim();
-  if (!key) { document.getElementById("fbErr").textContent="⚠ Key boş"; return; }
-  let cfg; try { cfg = JSON.parse(raw.replace(/([{,]\s*)([a-zA-Z_]\w*)\s*:/g,'$1"$2":')); } catch { document.getElementById("fbErr").textContent="⚠ Geçersiz JSON"; return; }
-  if (!cfg.databaseURL) { document.getElementById("fbErr").textContent="⚠ databaseURL eksik"; return; }
-  initFirebase(cfg, key); closeModal();
+  const errEl = document.getElementById("fbErr");
+  if (!raw) { errEl.textContent="⚠ Config boş — Firebase config'i yapıştır"; return; }
+  if (!key) { errEl.textContent="⚠ Sync key boş"; return; }
+  let cfg;
+  try {
+    const normalized = raw.replace(/([{,]\s*)([a-zA-Z_]\w*)\s*:/g, '$1"$2":');
+    cfg = JSON.parse(normalized);
+  } catch(e) {
+    errEl.textContent="⚠ JSON parse hatası: " + e.message;
+    return;
+  }
+  if (!cfg.databaseURL) { errEl.textContent="⚠ databaseURL bulunamadı — tüm config'i yapıştır"; return; }
+  errEl.textContent="";
+  try {
+    // Delete existing Firebase app if any
+    if (firebase.apps.length) {
+      firebase.apps.forEach(app => app.delete());
+    }
+    firebase.initializeApp(cfg);
+    db = firebase.database();
+    syncKey = key;
+    try { localStorage.setItem("skt_fb_config", JSON.stringify(cfg)); } catch {}
+    try { localStorage.setItem("skt_fb_key", key); } catch {}
+    startListener();
+    setSyncStatus("syncing");
+    closeModal();
+    toast("☁ Firebase bağlandı!", 3000);
+  } catch(e) {
+    errEl.textContent="⚠ Firebase hatası: " + e.message;
+  }
 }
 function disconnectFirebase() { if(db) db.ref(syncKey).off(); db=null; syncKey=""; try{localStorage.removeItem("skt_fb_config");localStorage.removeItem("skt_fb_key");}catch{} setSyncStatus("nokey"); closeModal(); }
 
