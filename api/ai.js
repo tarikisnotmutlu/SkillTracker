@@ -1,18 +1,13 @@
-// api/ai.js
-// OpenAI proxy — API key server'da kalır, browser'a gitmez
-
+// api/ai.js — OpenAI proxy, API key server'da kalır
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
-  // Auth cookie kontrolü
-  const cookies = req.headers.cookie || '';
-  const authToken = process.env.AUTH_TOKEN || 'tarik_auth_2026';
-  if (!cookies.includes(`skill_auth=${authToken}`)) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
-  const { messages, jsonMode } = req.body;
+  const { messages, jsonMode } = req.body || {};
   if (!messages) return res.status(400).json({ error: 'messages required' });
+
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: 'OPENAI_API_KEY env var eksik' });
+  }
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -28,7 +23,6 @@ export default async function handler(req, res) {
         ...(jsonMode ? { response_format: { type: 'json_object' } } : {})
       })
     });
-
     const data = await response.json();
     if (data.error) return res.status(400).json({ error: data.error.message });
     return res.status(200).json({ content: data.choices[0].message.content });
