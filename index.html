@@ -5,6 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Skill Tracker">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<script>
+  // Auth check — cookie yoksa login'e yönlendir
+  if (!document.cookie.includes('skill_auth=')) {
+    window.location.href = '/login.html';
+  }
+</script>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0f0f0f">
 <title>Skill Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
@@ -374,11 +384,11 @@
   <div style="display:flex;align-items:center;gap:8px">
     <div class="streak-badge" id="streakBadge">🔥 0</div>
     <button class="icon-btn" onclick="toggleCompact()" id="compactBtn" title="Kompakt Mod">⊟</button>
-    <button class="icon-btn" onclick="openModal('apikey')" title="API Ayarları">🔑</button>
     <button class="icon-btn" onclick="openModal('firebase')" title="Firebase Sync">☁</button>
     <button class="icon-btn" onclick="openModal('format')" title="JSON Formatı">?</button>
     <button class="icon-btn" onclick="openModal('import')" title="JSON Yükle">+</button>
     <button class="icon-btn" onclick="exportData()" title="Tümünü Dışa Aktar">↓</button>
+    <button class="icon-btn" onclick="logout()" title="Çıkış">🚪</button>
   </div>
 </div>
 
@@ -590,7 +600,6 @@ let userDescs = {};
 let streak = 0;
 let lastActiveDate = "";
 let compactMode = false;
-let openaiKey = "";
 let pomoSeconds = 25 * 60;
 let pomoRunning = false;
 let pomoInterval = null;
@@ -673,7 +682,6 @@ function load() {
   try { streak = parseInt(localStorage.getItem("skt_streak") || "0"); } catch {}
   try { lastActiveDate = localStorage.getItem("skt_last_date") || ""; } catch {}
   try { compactMode = localStorage.getItem("skt_compact") === "true"; } catch {}
-  try { openaiKey = localStorage.getItem("skt_oai_key") || ""; } catch {}
   if (!Object.keys(data).length) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
   activeTrack = Object.keys(data)[0] || "german";
   // Auto-reconnect if config was saved
@@ -1077,7 +1085,7 @@ async function runTestFromSelector() {
 
 // ── OpenAI API helper ─────────────────────────────────────────
 async function callOpenAI(messagesOrStr, jsonMode = false) {
-  if (!openaiKey) { openModal("apikey"); throw new Error("API key yok — 🔑 butonundan gir"); }
+  // Key is server-side in Vercel env vars
   const messages = typeof messagesOrStr === "string"
     ? [{ role: "user", content: messagesOrStr }]
     : messagesOrStr;
@@ -1087,9 +1095,9 @@ async function callOpenAI(messagesOrStr, jsonMode = false) {
     max_tokens: 1500,
     ...(jsonMode ? { response_format: { type: "json_object" } } : {})
   };
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch("/api/ai", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${openaiKey}` },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
   const d = await res.json();
@@ -1123,7 +1131,6 @@ function buildContext() {
 
 // ── Coach Panel ───────────────────────────────────────────────
 async function openCoach(mode = "plan") {
-  if (!openaiKey) { openModal("apikey"); return; }
   if (mode === "test") { openTestSelectorModal(); return; }
   document.getElementById("coachOverlay").style.display = "flex";
   document.getElementById("coachBody").innerHTML = `<div class="coach-loading"><div class="coach-spinner"></div><span>Analiz ediliyor, plan hazırlanıyor...</span></div>`;
@@ -1284,6 +1291,11 @@ function createTestOutput() {
   el.append(hdr, body);
   document.getElementById("sectionsContainer").after(el);
   return el;
+}
+
+function logout() {
+  document.cookie = "skill_auth=; Max-Age=0; Path=/";
+  window.location.href = "/login.html";
 }
 
 function closeCoach() {
@@ -1465,7 +1477,6 @@ function switchCoachTab(tab) {
 }
 
 function openCoach(tab = "plan", showOverlay = true) {
-  if (!openaiKey) { openModal("apikey"); return; }
   coachTab = tab;
   const overlay = document.getElementById("modalOverlay");
   document.getElementById("modalTitle").textContent = "🧠 Koç";
@@ -1616,12 +1627,12 @@ function renderTestTab() {
 }
 
 // ── OpenAI helper ─────────────────────────────────────────────
-async function callOpenAI(prompt, json = false) {
+async function callOpenAI_OLD_UNUSED(prompt, json = false) {
   const body = { model:"gpt-4o-mini", messages:[{role:"user",content:prompt}], max_tokens:1400, temperature:0.7 };
   if (json) body.response_format = { type:"json_object" };
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res2 = await fetch("/api/ai", {
     method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":`Bearer ${openaiKey}`},
+    headers:{"Content-Type":"application/json"},
     body: JSON.stringify(body)
   });
   const d = await res.json();

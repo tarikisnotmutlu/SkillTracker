@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f0f0f">
+<title>Skill Tracker — Giriş</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, sans-serif;
+    background: #0f0f0f; color: #f0f0f0;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 20px;
+    padding: 40px 32px; width: 100%; max-width: 360px; text-align: center;
+  }
+  .icon { font-size: 48px; margin-bottom: 16px; }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  p { font-size: 13px; color: #666; margin-bottom: 28px; }
+  input {
+    width: 100%; padding: 14px 16px; border-radius: 12px;
+    border: 1px solid #333; background: #0f0f0f; color: #f0f0f0;
+    font-size: 16px; text-align: center; letter-spacing: 4px;
+    outline: none; margin-bottom: 12px;
+  }
+  input:focus { border-color: #ec4899; }
+  button {
+    width: 100%; padding: 14px; border-radius: 12px; border: none;
+    background: #ec4899; color: #000; font-size: 15px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+  }
+  button:active { opacity: 0.8; }
+  .error { color: #f87171; font-size: 12px; margin-top: 10px; min-height: 18px; }
+  .loading { opacity: 0.6; pointer-events: none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">🎯</div>
+  <h1>Skill Tracker</h1>
+  <p>Kişisel Öğrenme Koçun</p>
+  <input type="password" id="pw" placeholder="••••••••" maxlength="50"
+    onkeydown="if(event.key==='Enter') login()">
+  <button onclick="login()" id="btn">Giriş</button>
+  <div class="error" id="err"></div>
+</div>
+<script>
+  async function login() {
+    const pw = document.getElementById('pw').value.trim();
+    const btn = document.getElementById('btn');
+    const err = document.getElementById('err');
+    if (!pw) { err.textContent = 'Şifre gir'; return; }
+    btn.textContent = '...'; btn.classList.add('loading'); err.textContent = '';
+    try {
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw })
+      });
+      if (res.ok) {
+        window.location.href = '/';
+      } else {
+        const d = await res.json();
+        err.textContent = d.error || 'Yanlış şifre';
+      }
+    } catch(e) {
+      err.textContent = 'Bağlantı hatası';
+    }
+    btn.textContent = 'Giriş'; btn.classList.remove('loading');
+  }
+</script>
+</body>
+</html>
