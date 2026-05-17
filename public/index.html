@@ -373,6 +373,59 @@
 </head>
 <body>
 
+<div id="lockScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:20px;padding:40px 32px;width:100%;max-width:340px;text-align:center">
+    <div style="font-size:48px;margin-bottom:16px">🎯</div>
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px;color:#f0f0f0">Skill Tracker</h1>
+    <p style="font-size:13px;color:#666;margin-bottom:28px">Kişisel Öğrenme Koçun</p>
+    <input id="lockPw" type="password" placeholder="••••••••" maxlength="50"
+      style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid #333;background:#0f0f0f;color:#f0f0f0;font-size:16px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:12px;box-sizing:border-box"
+      onkeydown="if(event.key==='Enter')checkLock()">
+    <button onclick="checkLock()"
+      style="width:100%;padding:14px;border-radius:12px;border:none;background:#ec4899;color:#000;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+      Giriş
+    </button>
+    <div id="lockErr" style="color:#f87171;font-size:12px;margin-top:10px;min-height:18px"></div>
+  </div>
+</div>
+
+<script>
+// ── Lock Screen ───────────────────────────────────────────────
+// Şifreni değiştirmek için: LOCK_HASH sabitini SHA-256 hash ile güncelle
+// Geçici şifre: "skill2026" → production'da değiştir
+const LOCK_HASH = "5d75acce7e0ef9a9393a4fd848b9cb554b78ef184e311dec8e957cd13ba1ac13";
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+async function checkLock() {
+  const pw = document.getElementById('lockPw').value;
+  const err = document.getElementById('lockErr');
+  if (!pw) { err.textContent = 'Şifre gir'; return; }
+  const hash = await sha256(pw);
+  // Stored hash ile karşılaştır
+  const stored = localStorage.getItem('skt_lock_hash') || LOCK_HASH;
+  if (hash === stored) {
+    sessionStorage.setItem('skt_auth', '1');
+    document.getElementById('lockScreen').style.display = 'none';
+    document.body.style.overflow = '';
+  } else {
+    err.textContent = 'Yanlış şifre';
+    document.getElementById('lockPw').value = '';
+    document.getElementById('lockPw').focus();
+  }
+}
+
+// İlk yüklemede kontrol
+if (!sessionStorage.getItem('skt_auth')) {
+  document.getElementById('lockScreen').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  setTimeout(() => document.getElementById('lockPw').focus(), 100);
+}
+</script>
+
 <div class="header">
   <div style="display:flex;align-items:center;gap:8px">
     <div class="header-title">Skill Tracker</div>
@@ -1294,8 +1347,8 @@ function createTestOutput() {
 }
 
 function logout() {
-  document.cookie = "skill_auth=; Max-Age=0; Path=/";
-  window.location.href = "/login.html";
+  sessionStorage.removeItem('skt_auth');
+  location.reload();
 }
 
 function closeCoach() {
