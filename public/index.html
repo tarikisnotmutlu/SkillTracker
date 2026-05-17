@@ -127,6 +127,7 @@ pre.format-block{background:var(--bg);border:1px solid var(--border);border-radi
   </div>
   <div class="header-btns">
     <button class="icon-btn" onclick="toggleAllSections()" id="collapseBtn" title="Tümünü Kapat/Aç">⊟</button>
+    <button class="icon-btn" onclick="openModal('history')" title="Geçmiş">📜</button>
     <button class="icon-btn" onclick="openModal('firebase')" title="Firebase Sync">☁</button>
     <button class="icon-btn" onclick="openModal('import')" title="JSON Yükle">+</button>
     <button class="icon-btn" onclick="openModal('format')" title="Format">?</button>
@@ -189,6 +190,10 @@ var allCollapsed = false, editingId = null;
 var pomoSeconds = 1500, pomoTotal = 1500;
 var pomoRunning = false, pomoInterval = null, pomoIsBreak = false;
 var currentMode = "merge";
+var trackOrder = [];       // ordered list of track ids
+var archivedTracks = {};   // {tid: true}
+var aiHistory = [];        // [{type,date,title,content}]
+var dragTid = null;
 
 // ═══════════════════════════════════════════════════════════════
 // SYNC STATUS
@@ -273,6 +278,9 @@ function save() {
   saveLocal("skt_descs", userDescs);
   try { localStorage.setItem("skt_streak", String(streak)); } catch(e) {}
   try { localStorage.setItem("skt_last_date", lastActiveDate); } catch(e) {}
+  try { localStorage.setItem("skt_order",    JSON.stringify(trackOrder)); } catch(e) {}
+  try { localStorage.setItem("skt_archived", JSON.stringify(archivedTracks)); } catch(e) {}
+  try { localStorage.setItem("skt_history",  JSON.stringify(aiHistory.slice(-50))); } catch(e) {}
   if (db && syncKey) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(pushToFirebase, 800);
@@ -285,8 +293,15 @@ function load() {
   try { var u = localStorage.getItem("skt_descs");   if (u) userDescs = JSON.parse(u); } catch(e) {}
   try { streak = parseInt(localStorage.getItem("skt_streak") || "0") || 0; } catch(e) {}
   try { lastActiveDate = localStorage.getItem("skt_last_date") || ""; } catch(e) {}
+  try { var o = localStorage.getItem("skt_order");    if (o) trackOrder    = JSON.parse(o); } catch(e) {}
+  try { var ar= localStorage.getItem("skt_archived"); if (ar)archivedTracks= JSON.parse(ar);} catch(e) {}
+  try { var h = localStorage.getItem("skt_history");  if (h) aiHistory     = JSON.parse(h); } catch(e) {}
   if (!Object.keys(data).length) data = {};
-  activeTrack = Object.keys(data)[0] || "";
+  // Sync trackOrder with actual data keys
+  var dataKeys = Object.keys(data);
+  trackOrder = trackOrder.filter(function(t){ return data[t]; });
+  dataKeys.forEach(function(k){ if (trackOrder.indexOf(k) === -1) trackOrder.push(k); });
+  activeTrack = trackOrder.filter(function(t){ return !archivedTracks[t]; })[0] || "";
   // Auto-reconnect Firebase
   try {
     var cfg = localStorage.getItem("skt_fb_config");
@@ -376,6 +391,16 @@ function renderSections() {
 function selectTrack(tid) { activeTrack = tid; render(); }
 
 function toggleSection(sk) {
+  if (allCollapsed) {
+    // Materialize current collapsed state for all sections, then release global collapse
+    Object.keys(data).forEach(function(tid) {
+      (data[tid].sections||[]).forEach(function(_, si) {
+        collapsed[tid+"-"+si] = true;
+      });
+    });
+    allCollapsed = false;
+    document.getElementById("collapseBtn").style.opacity = "0.7";
+  }
   collapsed[sk] = !collapsed[sk];
   renderSections();
 }
@@ -603,7 +628,7 @@ function openCoach() {
     var remaining = (t.sections||[]).reduce(function(a,s){ return a+s.items.filter(function(i){ return !checked[i.id]; }).length; },0);
     if (!remaining) return "";
     return '<label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">'+
-      '<input type="checkbox" class="track-sel" value="'+tid+'" checked style="accent-color:'+(m.color||"#818cf8")+';width:16px;height:16px">'+
+      '<input type="checkbox" class="track-sel" value="'+tid+'" style="accent-color:'+(m.color||"#818cf8")+';width:16px;height:16px">'+
       '<span style="flex:1"><span style="font-size:14px;margin-right:6px">'+(m.icon||"📋")+'</span>'+
       '<span style="font-size:13px;font-weight:600">'+(m.label||tid)+'</span></span>'+
       '<span style="font-size:11px;color:var(--muted);font-family:\'DM Mono\',monospace">'+remaining+' madde</span></label>';
@@ -689,6 +714,9 @@ function renderCoachPlan(r) {
     '</div>'+
     '<button class="apply-btn" style="margin-top:12px;background:#ec4899" onclick="closeCoach()">Başlayalım 💪</button>';
   document.getElementById("coachBody").innerHTML = html;
+  // Save to history
+  aiHistory.push({type:"plan", date:new Date().toLocaleString("tr-TR"), title:"Koç Planı — "+coachMinutes+"dk", content:html});
+  try { localStorage.setItem("skt_history", JSON.stringify(aiHistory.slice(-50))); } catch(e) {}
 }
 
 function closeCoach() { document.getElementById("coachOverlay").style.display = "none"; }
@@ -754,7 +782,12 @@ function showTestOutput(title, prompt) {
   el.scrollIntoView({behavior:"smooth"});
   callAI(prompt, false, function(text, err) {
     var bodyEl = document.getElementById("testBody");
-    if (bodyEl) bodyEl.textContent = err ? "Hata: "+err : text;
+    if (!bodyEl) return;
+    if (err) { bodyEl.textContent = "Hata: "+err; return; }
+    bodyEl.textContent = text;
+    // Save to history
+    aiHistory.push({type:"test", date:new Date().toLocaleString("tr-TR"), title:title, content:text});
+    try { localStorage.setItem("skt_history", JSON.stringify(aiHistory.slice(-50))); } catch(e) {}
   });
 }
 
@@ -803,6 +836,37 @@ function openModal(type) {
     }
   }
 
+  if (type === "archived") {
+    title.textContent = "📦 Arşivlenmiş Trackler";
+    var archived = trackOrder.filter(function(t){ return archivedTracks[t] && data[t]; });
+    if (!archived.length) { body.innerHTML = '<p class="hint">Arşivlenmiş track yok.</p>'; return; }
+    body.innerHTML = archived.map(function(tid) {
+      var m = (data[tid].meta||{});
+      return '<div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">'+
+        '<span style="font-size:20px">'+(m.icon||"📋")+'</span>'+
+        '<span style="flex:1;font-size:13px;font-weight:600">'+(m.label||tid)+'</span>'+
+        '<button onclick="unarchiveTrack(''+tid+'');closeModal()" style="padding:6px 14px;border-radius:8px;border:1px solid #34d399;background:none;color:#34d399;font-size:12px;cursor:pointer">Geri Al</button>'+
+        '</div>';
+    }).join("");
+  }
+
+  if (type === "history") {
+    title.textContent = "📜 Geçmiş Planlar & Testler";
+    if (!aiHistory.length) { body.innerHTML = '<p class="hint">Henüz kayıtlı plan veya test yok.</p>'; return; }
+    var sorted = aiHistory.slice().reverse();
+    body.innerHTML = sorted.map(function(h, idx) {
+      var icon = h.type === "test" ? "🧪" : "🎯";
+      return '<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">'+
+        '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface2);cursor:pointer" onclick="toggleHistory('+idx+')">'+
+          '<span>'+icon+'</span>'+
+          '<span style="flex:1;font-size:13px;font-weight:600">'+h.title+'</span>'+
+          '<span style="font-size:10px;color:var(--muted)">'+h.date+'</span>'+
+        '</div>'+
+        '<div id="hist_'+idx+'" style="display:none;padding:12px;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto">'+h.content.replace(/<[^>]+>/g,"")+'</div>'+
+        '</div>';
+    }).join("");
+  }
+
   if (type === "format") {
     title.textContent = "JSON Format";
     body.innerHTML = '<p class="hint">Claude\'dan "dbt için JSON yaz" gibi iste, kopyala-yapıştır.</p>'+
@@ -846,6 +910,11 @@ function submitJson() {
   var err = applyJson(document.getElementById("jsonInput").value.trim(), currentMode);
   if (err) { document.getElementById("jsonErr").textContent = "⚠ "+err; return; }
   closeModal();
+}
+
+function toggleHistory(idx) {
+  var el = document.getElementById("hist_"+idx);
+  if (el) el.style.display = el.style.display === "none" ? "block" : "none";
 }
 
 function logout() { localStorage.removeItem("skill_token"); window.location.replace("/login.html"); }
