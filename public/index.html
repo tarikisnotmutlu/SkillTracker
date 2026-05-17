@@ -718,7 +718,16 @@ function submitFirebase() {
     syncKey = key;
     try { localStorage.setItem("skt_fb_config", JSON.stringify(cfg)); } catch {}
     try { localStorage.setItem("skt_fb_key", key); } catch {}
-    startListener();
+    // Start realtime listener
+    db.ref(key).on("value", snap => {
+      const val = snap.val();
+      if (!val) { db.ref(key).set({ data, checked, userDescs }); return; }
+      if (val.data)      { data      = val.data;      try{localStorage.setItem("skt_data",    JSON.stringify(data));}catch{} }
+      if (val.checked)   { checked   = val.checked;   try{localStorage.setItem("skt_checked", JSON.stringify(checked));}catch{} }
+      if (val.userDescs) { userDescs = val.userDescs; try{localStorage.setItem("skt_descs",   JSON.stringify(userDescs));}catch{} }
+      if (!activeTrack || !data[activeTrack]) activeTrack = Object.keys(data)[0] || "";
+      render(); setSyncStatus("synced");
+    }, () => setSyncStatus("offline"));
     setSyncStatus("syncing");
     closeModal();
     toast("☁ Firebase bağlandı!", 3000);
