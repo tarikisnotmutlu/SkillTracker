@@ -39,7 +39,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .pomo-time.break { color: #34d399; }
 .pomo-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 13px; padding: 4px 10px; cursor: pointer; }
 .pomo-progress { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
-.pomo-fill { height: 100%; border-radius: 2px; transition: width 1s linear; }
+.pomo-fill { height: 100%; border-radius: 2px; transition: width 0.9s linear; }
 .pomo-fill.work  { background: #818cf8; }
 .pomo-fill.break { background: #34d399; }
 
@@ -182,7 +182,7 @@ pre.format-block { background: var(--bg); border: 1px solid var(--border); borde
 <div class="header">
   <div class="header-left">
     <span class="header-title">Skill Tracker</span>
-    <div class="sync-dot nokey" id="syncDot"></div>
+    <div style="display:flex;align-items:center;gap:4px"><div class="sync-dot nokey" id="syncDot"></div><span style="font-size:10px;color:var(--muted)" id="syncLabel">—</span></div>
     <div class="streak-badge" id="streakBadge">🔥 0</div>
   </div>
   <div class="header-btns">
@@ -211,8 +211,7 @@ pre.format-block { background: var(--bg); border: 1px solid var(--border); borde
 
 <!-- Bottom bar -->
 <div class="bottom-bar">
-  <button class="btn" id="routeBtn" onclick="openDailyRoute()" style="background:#ec4899;color:#fff">📅 Günlük Rota</button>
-  <button class="btn" onclick="openCoach()" style="background:#818cf8;color:#000">🎯 Koç</button>
+  <button class="btn" onclick="openCoach()" style="background:#ec4899;color:#fff;font-size:14px">🎯 Koç</button>
   <button class="btn" onclick="openTestSelector()" style="background:var(--surface2);color:var(--text);border:1px solid var(--border)">🧪 Test</button>
   <button class="btn btn-ghost" onclick="exportChecked()">📋</button>
   <button class="btn btn-ghost" onclick="exportCheckedJson()">↓</button>
@@ -243,85 +242,6 @@ pre.format-block { background: var(--bg); border: 1px solid var(--border); borde
 </div>
 
 <script>
-// ── State ─────────────────────────────────────────────────────
-let data = {}, checked = {}, userDescs = {};
-let activeTrack = "";
-let db = null, syncKey = "", saveTimer = null, remoteListener = null, ignoreRemote = false;
-let streak = 0, lastActiveDate = "";
-let allCollapsed = false, editingId = null;
-let pomoSeconds = 25*60, pomoTotal = 25*60, pomoRunning = false, pomoInterval = null, pomoIsBreak = false;
-
-// ── Firebase ──────────────────────────────────────────────────
-function setSyncStatus(s) {
-  const dot = document.getElementById("syncDot");
-  if (!dot) return;
-  dot.className = "sync-dot " + s;
-}
-
-function initFirebase(config, key) {
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(config);
-    db = firebase.database(); syncKey = key;
-    try { localStorage.setItem("skt_fb_config", JSON.stringify(config)); } catch {}
-    try { localStorage.setItem("skt_fb_key", key); } catch {}
-    startListener(); setSyncStatus("syncing");
-  } catch(e) { alert("Firebase hatası: " + e.message); }
-}
-
-function startListener() {
-  if (!db || !syncKey) return;
-  db.ref(syncKey).on("value", snap => {
-    if (ignoreRemote) return;
-    const val = snap.val();
-    if (!val) { pushFB(); return; }
-    if (val.data)      { data      = val.data;      saveLocal("skt_data", data); }
-    if (val.checked)   { checked   = val.checked;   saveLocal("skt_checked", checked); }
-    if (val.userDescs) { userDescs = val.userDescs; saveLocal("skt_descs", userDescs); }
-    if (!activeTrack || !data[activeTrack]) activeTrack = Object.keys(data)[0] || "";
-    render(); setSyncStatus("synced");
-  }, () => setSyncStatus("offline"));
-}
-
-function pushFB() {
-  if (!db || !syncKey) return;
-  ignoreRemote = true; setSyncStatus("syncing");
-  db.ref(syncKey).set({ data, checked, userDescs })
-    .then(() => setSyncStatus("synced"))
-    .catch(() => setSyncStatus("offline"))
-    .finally(() => setTimeout(() => ignoreRemote = false, 300));
-}
-
-// ── Persistence ───────────────────────────────────────────────
-function saveLocal(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} }
-
-function save() {
-  saveLocal("skt_data", data); saveLocal("skt_checked", checked); saveLocal("skt_descs", userDescs);
-  try { localStorage.setItem("skt_streak", String(streak)); localStorage.setItem("skt_last_date", lastActiveDate); } catch {}
-  if (db && syncKey) { clearTimeout(saveTimer); saveTimer = setTimeout(pushFB, 800); }
-}
-
-function load() {
-  try { const d = localStorage.getItem("skt_data");    if (d) data      = JSON.parse(d); } catch {}
-  try { const c = localStorage.getItem("skt_checked"); if (c) checked   = JSON.parse(c); } catch {}
-  try { const u = localStorage.getItem("skt_descs");   if (u) userDescs = JSON.parse(u); } catch {}
-  try { streak = parseInt(localStorage.getItem("skt_streak") || "0"); } catch {}
-  try { lastActiveDate = localStorage.getItem("skt_last_date") || ""; } catch {}
-  if (!Object.keys(data).length) data = JSON.parse(JSON.stringify(DEFAULT_DATA));
-  activeTrack = Object.keys(data)[0] || "";
-  try {
-    const cfg = localStorage.getItem("skt_fb_config");
-    const key = localStorage.getItem("skt_fb_key");
-    if (cfg && key) initFirebase(JSON.parse(cfg), key);
-  } catch {}
-}
-
-// ── Computed ──────────────────────────────────────────────────
-const allItems  = tid => (data[tid]?.sections || []).flatMap(s => s.items);
-const doneCount = tid => allItems(tid).filter(i => checked[i.id]).length;
-const pct       = tid => { const t = allItems(tid).length; return t ? Math.round(doneCount(tid)/t*100) : 0; };
-const trackColor= tid => data[tid]?.meta?.color || "#818cf8";
-const trackCls  = tid => data[tid]?.meta?.cls   || "dp100";
-
 // ── Render ────────────────────────────────────────────────────
 function render() { renderTabs(); renderSections(); updateStreak(); save(); }
 
@@ -503,106 +423,126 @@ function buildCtx() {
   return lines.join("\n");
 }
 
-// ── Günlük Rota ───────────────────────────────────────────────
-async function openDailyRoute() {
-  openModal("route");
-  document.getElementById("modalTitle").textContent = "📅 Bugünün Rotası";
-  document.getElementById("modalBody").innerHTML = `<div style="display:flex;gap:6px;justify-content:center;padding:30px"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+// ── Coach (interactive, 2-step) ──────────────────────────────
+function openCoach() {
+  document.getElementById("coachOverlay").style.display = "flex";
 
-  const sys = `Sen Tarik'in öğrenme koçusun. Tarik TU Münih MSc öğrencisi (Eylül 2026 mezuniyet), Rohde & Schwarz PMO çalışıyor, iş arıyor. Türkçe konuş, kısa ve net ol.`;
-  const usr = `İlerleme:\n${buildCtx()}\n\nBugün için 55-65 dakikalık somut rota yap. JSON ver, başka hiçbir şey yazma:\n{"motivasyon":"1 cümle","rota":[{"saat":"09:00","sure":20,"track":"track_id","gorev":"Yapılacak iş","neden":"Kısa açıklama"}]}`;
+  // Build track list for selection
+  const tracks = Object.entries(data);
+  if (!tracks.length) {
+    document.getElementById("coachBody").innerHTML = `<p style="color:var(--muted);padding:20px;font-size:13px">Henüz hiç track yok. + JSON Yükle ile başla.</p>`;
+    return;
+  }
+
+  const trackHtml = tracks.map(([tid, t]) => {
+    const m = t.meta || {}; const all = (t.sections||[]).flatMap(s=>s.items);
+    const remaining = all.filter(i => !checked[i.id]).length;
+    if (!remaining) return "";
+    return `<label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer">
+      <input type="checkbox" class="track-sel" value="${tid}" checked style="accent-color:${m.color||'#818cf8'};width:16px;height:16px">
+      <span style="flex:1">
+        <span style="font-size:14px;margin-right:6px">${m.icon||"📋"}</span>
+        <span style="font-size:13px;font-weight:600">${m.label||tid}</span>
+      </span>
+      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${remaining} madde</span>
+    </label>`;
+  }).filter(Boolean).join("");
+
+  document.getElementById("coachBody").innerHTML = `
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Bugün hangi konulara bakacaksın?</p>
+    <div id="trackSel" style="margin-bottom:20px">${trackHtml}</div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px">Kaç saat vaktın var?</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        ${[30,60,90,120].map(m=>`<button onclick="selectTime(${m})" class="time-btn" id="t${m}" style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">${m<60?m+"dk":m/60+" saat"}</button>`).join("")}
+        <input type="number" id="customTime" placeholder="Dk" min="15" max="480"
+          style="width:70px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;text-align:center"
+          oninput="selectTime(parseInt(this.value)||60)">
+      </div>
+    </div>
+    <button class="apply-btn" style="background:#ec4899" onclick="generateCoachPlan()">Plan Oluştur →</button>
+  `;
+  window._coachMinutes = 60;
+  selectTime(60);
+}
+
+function selectTime(mins) {
+  window._coachMinutes = mins;
+  document.querySelectorAll(".time-btn").forEach(b => {
+    b.style.background = parseInt(b.id.replace("t","")) === mins ? "#ec4899" : "var(--surface2)";
+    b.style.color = parseInt(b.id.replace("t","")) === mins ? "#000" : "var(--text)";
+  });
+}
+
+async function generateCoachPlan() {
+  const selectedTracks = [...document.querySelectorAll(".track-sel:checked")].map(cb => cb.value);
+  if (!selectedTracks.length) { alert("En az bir track seç."); return; }
+  const minutes = window._coachMinutes || 60;
+
+  document.getElementById("coachBody").innerHTML = `<div class="coach-loading"><div class="coach-spinner"></div><span>Plan hazırlanıyor...</span></div>`;
+
+  // Build unticked items per selected track
+  const context = selectedTracks.map(tid => {
+    const t = data[tid]; if (!t) return null;
+    const m = t.meta || {};
+    const sections = (t.sections||[]).map(sec => {
+      const unticked = sec.items.filter(i => !checked[i.id]);
+      return unticked.length ? { bolum: sec.title, gorevler: unticked.map(i => ({id:i.id, metin:i.text})) } : null;
+    }).filter(Boolean);
+    return sections.length ? { track: tid, ad: m.label||tid, ikon: m.icon||"", bolumler: sections } : null;
+  }).filter(Boolean);
+
+  if (!context.length) {
+    document.getElementById("coachBody").innerHTML = `<p style="color:var(--muted);padding:20px;font-size:13px">Seçili track'lerde tamamlanmamış madde yok. 🎉</p>`; return;
+  }
+
+  const sys = `Sen Tarik'in öğrenme koçusun. TU Münih MSc (Eylül 2026), Rohde & Schwarz PMO çalışıyor, Almanca/AI/ML öğreniyor. Türkçe, net ve motive edici ol.`;
+  const usr = `Öğrenci ${minutes} dakika çalışacak. Seçilen konulardaki TIKLANMAMIŞ görevler:
+${JSON.stringify(context,null,2)}
+
+Bugün için sıralı plan yap. Toplam süre ${minutes} dakikayı geçmesin.
+
+Sadece JSON ver:
+{"motivasyon":"1 kısa cümle","plan":[{"sira":1,"track_id":"id","bolum":"bölüm adı","gorev_id":"id","gorev":"görev metni","sure":20,"neden":"neden öncelikli"}]}`;
 
   try {
     const raw = await callAI([{role:"system",content:sys},{role:"user",content:usr}], true);
     const r = JSON.parse(raw);
-    const trackColors = Object.fromEntries(Object.entries(data).map(([tid,t])=>[tid,t.meta?.color||"#818cf8"]));
-    const trackLabels = Object.fromEntries(Object.entries(data).map(([tid,t])=>[tid,t.meta?.label||tid]));
-
-    let html = "";
-    if (r.motivasyon) html += `<div style="font-size:13px;color:#ec4899;font-style:italic;margin-bottom:16px;padding:10px 14px;background:rgba(236,72,153,0.08);border-radius:10px">"${r.motivasyon}"</div>`;
-
-    const items = r.rota||[];
-    let total = items.reduce((a,i)=>a+(i.sure||0),0);
-    items.forEach(item=>{
-      const c = trackColors[item.track]||"#818cf8";
-      const l = trackLabels[item.track]||item.track;
-      html += `<div class="route-item">
-        <span class="route-time">${item.saat||""}</span>
-        <div class="route-content">
-          <span class="route-track" style="background:${c}20;color:${c}">${l}</span>
-          <div class="route-task">${item.gorev}</div>
-          ${item.neden?`<div class="route-why">${item.neden}</div>`:""}
-        </div>
-        <span class="route-dur">${item.sure}dk</span>
-      </div>`;
-    });
-    html += `<div style="font-size:12px;color:var(--muted);text-align:right;margin-top:12px;font-family:'DM Mono',monospace">Toplam: ${total}dk</div>`;
-    html += `<button class="apply-btn" onclick="closeModal()">Başlayalım 💪</button>`;
-    document.getElementById("modalBody").innerHTML = html;
+    renderCoachPlan(r, selectedTracks, minutes);
   } catch(e) {
-    document.getElementById("modalBody").innerHTML = `<p style="color:#f87171;font-size:13px">Hata: ${e.message}</p>`;
+    document.getElementById("coachBody").innerHTML = `<p style="color:#f87171;padding:20px">${e.message}</p>`;
   }
 }
 
-// ── Coach ─────────────────────────────────────────────────────
-async function openCoach() {
-  document.getElementById("coachOverlay").style.display = "flex";
-  document.getElementById("coachBody").innerHTML = `<div class="coach-loading"><div class="coach-spinner"></div><span>Analiz ediliyor...</span></div>`;
-  const sys = `Sen Tarik'in kişisel öğrenme koçusun. TU Münih MSc (Eylül 2026), Rohde & Schwarz PMO, Almanca/AI/ML öğreniyor. Türkçe, samimi ve motive edici ol.`;
-  const usr = `${buildCtx()}\n\nJSON ver:\n{"motivation":"1-2 cümle","plan":[{"track":"id","task":"iş","duration":"15 dk","why":"neden"}],"new_tasks":[{"track":"id","section":"bölüm","items":[{"id":"uid","text":"görev","note":"ipucu"}]}],"mini_test":{"topic":"konu","questions":["s1","s2","s3"]}}\n\nPlan ~60 dk, zayıf alanlara öncelik, new_tasks sadece boşluk varsa.`;
-  try {
-    const raw = await callAI([{role:"system",content:sys},{role:"user",content:usr}], true);
-    const coach = JSON.parse(raw);
-    renderCoach(coach);
-  } catch(e) { document.getElementById("coachBody").innerHTML = `<p style="color:#f87171;padding:20px">${e.message}</p>`; }
-}
-
-function renderCoach(coach) {
-  const tc = Object.fromEntries(Object.entries(data).map(([tid,t])=>[tid,t.meta?.color||"#818cf8"]));
+function renderCoachPlan(r, selectedTracks, minutes) {
+  const tc = Object.fromEntries(Object.entries(data).map(([tid,t])=>[tid,{color:t.meta?.color||"#818cf8",label:t.meta?.label||tid,icon:t.meta?.icon||""}]));
   let html = "";
-  if (coach.motivation) html += `<div style="padding:12px;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.3);border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.6">${coach.motivation}</div>`;
-  if (coach.plan?.length) {
-    html += `<div class="coach-section"><div class="coach-section-title">⏱ 1 Saatlik Plan</div>`;
-    let total = 0;
-    coach.plan.forEach(item=>{
-      const mins = parseInt(item.duration)||15; total += mins;
-      const c = tc[item.track]||"#818cf8"; const m = data[item.track]?.meta||{};
-      html += `<div class="plan-item"><div style="flex:1"><span class="plan-item-track" style="background:${c}20;color:${c}">${m.icon||""} ${m.label||item.track}</span><div class="plan-item-text">${item.task}</div><div class="plan-item-why">${item.why||""}</div></div><span class="plan-item-dur">${item.duration}</span></div>`;
-    });
-    html += `<div style="text-align:right;font-size:11px;color:var(--muted);margin-top:4px;font-family:'DM Mono',monospace">~${total} dk</div></div>`;
-  }
-  if (coach.new_tasks?.length) {
-    html += `<div class="coach-section"><div class="coach-section-title">✨ Yeni Görev Önerileri</div>`;
-    coach.new_tasks.forEach((g,gi)=>{
-      const c = tc[g.track]||"#818cf8"; const m = data[g.track]?.meta||{};
-      html += `<div class="new-task-card"><div class="new-task-header"><span style="font-size:13px;font-weight:700">${m.icon||""} ${g.section}</span><span style="font-size:11px;color:var(--muted)">${g.items?.length||0} görev</span></div><div class="new-task-items">${(g.items||[]).map(it=>`<div class="new-task-item"><span style="color:${c}">›</span> ${it.text}</div>`).join("")}<button class="add-tasks-btn" style="background:${c};color:#000" onclick="addCoachTasks(${gi})">+ Ekle</button></div></div>`;
-    });
-    html += `</div>`; window._coachTasks = coach.new_tasks;
-  }
-  if (coach.mini_test?.questions?.length) {
-    html += `<div class="coach-section"><div class="coach-section-title">📝 Mini Test — ${coach.mini_test.topic}</div>`;
-    coach.mini_test.questions.forEach((q,qi)=>{ html += `<div class="mini-q"><strong>${qi+1}.</strong> ${q}</div>`; });
-    html += `<button class="apply-btn" style="margin-top:12px" onclick="expandTest('${(coach.mini_test.topic||"").replace(/'/g,"\\'")}')">Tam test oluştur →</button></div>`;
-  }
+
+  if (r.motivasyon) html += `<div style="padding:10px 14px;background:rgba(236,72,153,0.1);border:1px solid rgba(236,72,153,0.25);border-radius:10px;margin-bottom:16px;font-size:13px;line-height:1.5;color:var(--text);font-style:italic">"${r.motivasyon}"</div>`;
+
+  const plan = r.plan || [];
+  let total = 0;
+  plan.forEach((item, idx) => {
+    total += item.sure || 0;
+    const tm = tc[item.track_id] || {color:"#818cf8",label:item.track_id,icon:""};
+    html += `<div style="display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+      <div style="width:28px;height:28px;border-radius:50%;background:${tm.color}20;color:${tm.color};font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">${idx+1}</div>
+      <div style="flex:1;min-width:0">
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${tm.color}20;color:${tm.color};display:inline-block;margin-bottom:4px">${tm.icon} ${tm.label}</span>
+        <div style="font-size:13px;font-weight:500;line-height:1.4;margin-bottom:2px">${item.gorev}</div>
+        <div style="font-size:11px;color:var(--muted)">${item.bolum} · ${item.neden||""}</div>
+      </div>
+      <div style="font-size:12px;font-family:'DM Mono',monospace;color:var(--muted);flex-shrink:0;padding-top:4px">${item.sure}dk</div>
+    </div>`;
+  });
+
+  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+    <span style="font-size:12px;color:var(--muted);font-family:'DM Mono',monospace">Toplam: ${total}dk / ${minutes}dk</span>
+    <button onclick="openCoach()" style="font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--muted);cursor:pointer">← Yeniden Seç</button>
+  </div>
+  <button class="apply-btn" style="margin-top:12px;background:#ec4899" onclick="closeCoach()">Başlayalım 💪</button>`;
+
   document.getElementById("coachBody").innerHTML = html;
-}
-
-function addCoachTasks(idx) {
-  const g = window._coachTasks?.[idx]; if (!g) return;
-  const err = applyJson(JSON.stringify(g), "merge"); if (err) { alert(err); return; }
-  toast(`✓ ${g.items?.length||0} görev eklendi`);
-  const btns = document.querySelectorAll(".add-tasks-btn"); if (btns[idx]) { btns[idx].textContent="✓ Eklendi"; btns[idx].disabled=true; btns[idx].style.opacity="0.5"; }
-}
-
-async function expandTest(topic) {
-  closeCoach();
-  const done = allItems(activeTrack).filter(i=>checked[i.id]).map(i=>i.text);
-  if (!done.length) { alert("Tiklenmiş madde yok."); return; }
-  const isGerman = activeTrack==="german";
-  const prompt = isGerman
-    ? `"${topic}" konusundan Almanca öğrencisi için 8 soruluk test: 3 çoktan seçmeli, 3 boşluk doldurma, 2 cümle yazma. Türkçe açıklamalı.\nTamamlanan konular:\n${done.slice(0,20).join("\n")}`
-    : `"${topic}" topic. 8 test questions: 3 multiple choice, 3 short answer, 2 practical. Completed:\n${done.slice(0,20).join("\n")}`;
-  showTestOutput(`📝 ${topic}`, prompt);
 }
 
 // ── Test Selector ─────────────────────────────────────────────
@@ -720,210 +660,7 @@ function submitJson() { const err=applyJson(document.getElementById("jsonInput")
 function logout() { localStorage.removeItem("skill_token"); window.location.replace("/login.html"); }
 
 // ── Default Data ──────────────────────────────────────────────
-const DEFAULT_DATA = {
-  german: { meta:{label:"Almanca B2",icon:"🇩🇪",color:"#f59e0b",cls:"german"}, sections:[
-    {title:"A1–A2 — Konjugation",items:[
-      {id:"g01",text:"sein fiilini tüm şahıslarla ezberle (ich bin, du bist, er ist...)"},
-      {id:"g02",text:"haben fiilini tüm şahıslarla ezberle"},
-      {id:"g03",text:"werden fiilini tüm şahıslarla ezberle"},
-      {id:"g04",text:"5 modal fiili öğren: können, müssen, wollen, dürfen, sollen",note:"Her birini 3 cümleyle yaz"},
-      {id:"g05",text:"10 düzenli fiili çek: machen, lernen, spielen, arbeiten, wohnen, kaufen, fragen, hören, sagen, suchen"},
-      {id:"g06",text:"10 düzensiz fiili çek: fahren, schlafen, essen, sehen, lesen, geben, nehmen, kommen, laufen, tragen"},
-      {id:"g07",text:"Anki'ye 'German verb conjugation A1' destesini kur, günlük tekrar başlat"},
-      {id:"g08",text:"Trennbare Verben öğren: aufstehen, anrufen, einkaufen, fernsehen",note:"Fiil ikiye ayrılıyor: Ich rufe dich an."},
-      {id:"g09",text:"Reflexive Verben öğren: sich waschen, sich freuen, sich erinnern",note:"B1'de sık çıkar"},
-    ]},
-    {title:"A1–A2 — Fälle (4 Hal)",items:[
-      {id:"g10",text:"Nominativ tablosunu ezberle: der/die/das/die, ein/eine/ein/–"},
-      {id:"g11",text:"Akkusativ tablosunu ezberle: den/die/das/die, einen/eine/ein/–"},
-      {id:"g12",text:"Dativ tablosunu ezberle: dem/der/dem/den, einem/einer/einem/–"},
-      {id:"g13",text:"Genitiv tablosunu ezberle: des/der/des/der, eines/einer/eines/–"},
-      {id:"g14",text:"yourdailygerman.com 'German cases explained' — Part 1 oku ve alıştırmaları yap"},
-      {id:"g15",text:"yourdailygerman.com — Part 2 ve 3 tamamla"},
-      {id:"g16",text:"Her hal için 5'er özgün cümle yaz"},
-      {id:"g17",text:"Sıfat çekimini öğren: der große Mann / einen großen Mann / mit dem großen Mann"},
-      {id:"g18",text:"Hal alıştırması: 10 cümlede boşluk doldur (der/den/dem/des seç)"},
-    ]},
-    {title:"A1–A2 — Wortstellung",items:[
-      {id:"g19",text:"V2 kuralını öğren: fiil her zaman 2. pozisyonda — 10 örnek cümle yaz"},
-      {id:"g20",text:"Soru cümleleri kur: W-Fragen (was, wo, wann, warum, wer, wie) — 10 cümle"},
-      {id:"g21",text:"Ja/Nein soruları kur — fiil başa geçer: Arbeitest du in München?"},
-      {id:"g22",text:"Koordinasyon bağlaçları: und/aber/oder/denn/sondern — her biri için 3 cümle"},
-      {id:"g23",text:"Subordinasyon bağlaçları: weil/dass/wenn/obwohl — fiil sona gider — 10 cümle"},
-      {id:"g24",text:"TE-KA-MO-LO sırasını öğren: temporal / kausal / modal / lokal",note:"Ich fahre morgen mit dem Auto nach Berlin."},
-      {id:"g25",text:"Olumsuz cümleler: nicht ve kein kullanımı — 10 cümle"},
-    ]},
-    {title:"A1–A2 — Präpositionen",items:[
-      {id:"g26",text:"5 Akkusativ edatını ezberle: durch, für, gegen, ohne, um — her biri için 2 cümle"},
-      {id:"g27",text:"7 Dativ edatını ezberle: aus, bei, mit, nach, seit, von, zu — her biri için 2 cümle"},
-      {id:"g28",text:"9 ikili edatı listele: in/an/auf/über/unter/vor/hinter/neben/zwischen"},
-      {id:"g29",text:"İkili edatlarda hareket (Akkusativ) vs. konum (Dativ) kuralını öğren",note:"Ich gehe in die Küche / Ich bin in der Küche"},
-      {id:"g30",text:"İkili edatlar için 10 cümle çifti yaz"},
-      {id:"g31",text:"Anki: 'German prepositions cases' destesini başlat"},
-      {id:"g32",text:"Genitiv edatları öğren: wegen, trotz, während, statt",note:"B2'de yazıda sık kullanılır"},
-    ]},
-    {title:"A1–A2 — Zeitformen: Perfekt",items:[
-      {id:"g33",text:"haben ile kullanılan 20 fiil listesi çıkar"},
-      {id:"g34",text:"sein ile kullanılan 15 fiili listele: gehen, kommen, fahren, fliegen...",note:"Hareket ve değişim fiilleri sein alır"},
-      {id:"g35",text:"Düzenli Partizip II: ge- + Stamm + -t (gemacht, gelernt)"},
-      {id:"g36",text:"30 düzensiz Partizip II'yi ezberle",note:"gehen→gegangen, schreiben→geschrieben..."},
-      {id:"g37",text:"Perfekt ile her gün 5 cümle yaz: Dün ne yaptın?"},
-      {id:"g38",text:"Trennbare Verben Partizip II: aufgestanden, eingekauft, angerufen — 5 örnek"},
-    ]},
-    {title:"B1 — Präteritum & Plusquamperfekt",items:[
-      {id:"g39",text:"war, hatte, wurde — tüm şahıslarla ezberle"},
-      {id:"g40",text:"Düzenli Präteritum: -te eki — ich machte, du machtest..."},
-      {id:"g41",text:"20 düzensiz Präteritum: ging, kam, fuhr, schrieb, aß, sah..."},
-      {id:"g42",text:"Perfekt vs. Präteritum: konuşmada Perfekt, yazıda Präteritum"},
-      {id:"g43",text:"Kısa hikaye yaz (10+ cümle) — sadece Präteritum"},
-      {id:"g44",text:"Plusquamperfekt: hatte/war + Partizip II — 'Önce ... olmuştu' yapısı"},
-      {id:"g45",text:"Plusquamperfekt ile 5 cümle: Nachdem ich gegessen hatte, ging ich schlafen."},
-    ]},
-    {title:"B1 — Konjunktiv II",items:[
-      {id:"g46",text:"würde + Infinitiv — en kolay Konjunktiv II formu"},
-      {id:"g47",text:"hätte/wäre/könnte/müsste/dürfte/sollte — tüm şahıslarla"},
-      {id:"g48",text:"10 dilek cümlesi: Ich würde gern nach Japan reisen."},
-      {id:"g49",text:"10 kibarca rica: Könnten Sie mir bitte helfen?"},
-      {id:"g50",text:"Wenn-Sätze: Wenn ich mehr Zeit hätte, würde ich... — 5 cümle"},
-      {id:"g51",text:"Konjunktiv II dolaylı anlatım: Er sagte, er wäre krank gewesen."},
-    ]},
-    {title:"B1 — Passiv",items:[
-      {id:"g52",text:"Vorgangspassiv: werden + Partizip II — 10 aktif cümleyi pasife çevir"},
-      {id:"g53",text:"Zustandspassiv: sein + Partizip II — 5 örnek"},
-      {id:"g54",text:"Passiv + Modal: Das muss/kann/soll gemacht werden — 5 cümle"},
-      {id:"g55",text:"Passiv Zeitformen: Präsens / Präteritum / Perfekt"},
-      {id:"g56",text:"Teknik süreç Passiv ile anlat — 8 cümle"},
-    ]},
-    {title:"B1 — Relativsätze & Wortschatz",items:[
-      {id:"g57",text:"Nominativ Relativsatz: Der Mann, der dort steht, ist mein Kollege."},
-      {id:"g58",text:"Akkusativ Relativsatz: Das Buch, das ich lese, ist interessant."},
-      {id:"g59",text:"Dativ Relativsatz: Der Kollege, dem ich geholfen habe, hat sich bedankt."},
-      {id:"g60",text:"wo/was/wer ile relatif cümleler — 5'er örnek"},
-      {id:"g61",text:"Her gün 3 kelimeyi relatif cümleyle tanımla"},
-      {id:"g62",text:"Anki: Goethe B2 Wortliste — günde 20 kart"},
-      {id:"g63",text:"İş hayatı vocabulary: 30 kelime (Besprechung, Zuständigkeit...)"},
-      {id:"g64",text:"Technologie vocabulary: 25 kelime (Datenschutz, Benutzeroberfläche...)"},
-    ]},
-    {title:"B2 — İleri Yapılar",items:[
-      {id:"g65",text:"Partizip I: der laufende Mann / das wachsende Unternehmen"},
-      {id:"g66",text:"Partizip II sıfat: das gebaute Haus / die gemachte Arbeit"},
-      {id:"g67",text:"5 gazete cümlesindeki Partizipialkonstruktion'ı relatif cümleye çevir"},
-      {id:"g68",text:"sowohl...als auch ile 3 cümle"},
-      {id:"g69",text:"weder...noch ile 3 cümle"},
-      {id:"g70",text:"zwar...aber ile 3 cümle"},
-      {id:"g71",text:"nicht nur...sondern auch ile 3 cümle"},
-      {id:"g72",text:"um...zu, ohne...zu, anstatt...zu — 5'er cümle"},
-    ]},
-    {title:"B2 — Sınav Hazırlığı",items:[
-      {id:"g73",text:"Goethe B2 sınav formatını incele: 4 bölüm, süreler, puanlar"},
-      {id:"g74",text:"Schreiben formatı: resmi mektup yapısı (Betreff, Anrede, Schlussformel)"},
-      {id:"g75",text:"1. resmi mektup yaz — LanguageTool ile düzelt"},
-      {id:"g76",text:"2. argüman yazısı yaz — Konnektoren kullan"},
-      {id:"g77",text:"3. makale özeti yaz — kendi cümlerinle"},
-      {id:"g78",text:"Goethe B2 Lesen mock test 1 — süreyi tut"},
-      {id:"g79",text:"Goethe B2 Hören mock test 1 — süreyi tut"},
-      {id:"g80",text:"Tandem partner ile B2 Sprechen mock — kaydet ve dinle"},
-      {id:"g81",text:"Tam mock sınav (4 bölüm, gerçek süreyle)"},
-      {id:"g82",text:"Goethe B2 sınavına kaydol — goethe.de/muenchen"},
-    ]},
-  ]},
-  dp100: { meta:{label:"DP-100 + LLM/RAG",icon:"🤖",color:"#818cf8",cls:"dp100"}, sections:[
-    {title:"Kurulum & Ortam",items:[
-      {id:"d01",text:"Azure hesabını doğrula — aka.ms/azureforstudents"},
-      {id:"d02",text:"Azure ML workspace oluştur"},
-      {id:"d03",text:"VS Code kur + Python + Pylance + Jupyter extension"},
-      {id:"d04",text:"Python venv oluştur ve aktive et"},
-      {id:"d05",text:"Paketleri yükle: azure-ai-ml, mlflow, langchain, openai, chromadb, streamlit"},
-      {id:"d06",text:"GitHub repo: llm-rag-pipeline — .gitignore, README ekle"},
-      {id:"d07",text:"OpenAI API key al — platform.openai.com"},
-      {id:"d08",text:".env dosyası kur, python-dotenv ile key yükle"},
-      {id:"d09",text:"Azure CLI kur, az login ile bağlan"},
-    ]},
-    {title:"DP-100 — Azure ML Temelleri",items:[
-      {id:"d10",text:"MS Learn: 'Design and prepare an Azure ML solution' oku"},
-      {id:"d11",text:"Azure ML Studio'yu gez: Assets, Jobs, Endpoints, Datastores"},
-      {id:"d12",text:"Compute instance oluştur (Standard_DS11_v2)"},
-      {id:"d13",text:"Blob Storage oluştur, Azure ML Datastore olarak bağla"},
-      {id:"d14",text:"CSV dataset yükle, Data asset olarak kaydet"},
-      {id:"d15",text:"Azure ML Environment oluştur: pip requirements ile"},
-      {id:"d16",text:"Workspace, compute, datastore, environment ilişkisini açıkla"},
-    ]},
-    {title:"DP-100 — Model Eğitimi & AutoML",items:[
-      {id:"d17",text:"MS Learn: 'Explore data and train models' modülü"},
-      {id:"d18",text:"AutoML nedir — 5 cümleyle özetle"},
-      {id:"d19",text:"AutoML classification denemesi başlat — iris veya titanic"},
-      {id:"d20",text:"AutoML sonuçları: best model, accuracy, confusion matrix"},
-      {id:"d21",text:"train.py ile sklearn modeli eğit, Azure ML job olarak gönder"},
-      {id:"d22",text:"Hyperparameter tuning: sweep job, search space"},
-      {id:"d23",text:"Responsible AI dashboard: feature importance, error analysis"},
-    ]},
-    {title:"DP-100 — MLflow & Registry",items:[
-      {id:"d24",text:"MLflow nedir, Azure ML ile ilişkisi — özetle"},
-      {id:"d25",text:"mlflow.log_param() ve mlflow.log_metric() kullan"},
-      {id:"d26",text:"mlflow.log_artifact() ile model kaydet"},
-      {id:"d27",text:"Azure ML'e MLflow autolog: mlflow.sklearn.autolog()"},
-      {id:"d28",text:"Model Registry'ye kaydet: mlflow.register_model()"},
-      {id:"d29",text:"Kayıtlı modeli yükle: mlflow.pyfunc.load_model()"},
-      {id:"d30",text:"Experiment runs'ı Studio'da karşılaştır"},
-    ]},
-    {title:"DP-100 — Pipelines",items:[
-      {id:"d31",text:"MS Learn: 'Build and operate ML solutions' modülü"},
-      {id:"d32",text:"Azure ML Pipeline nedir — oku"},
-      {id:"d33",text:"SDK v2 ile 2 adımlı pipeline: data prep → training"},
-      {id:"d34",text:"3. adım ekle: model evaluation"},
-      {id:"d35",text:"Compute cluster üzerinde çalıştır"},
-      {id:"d36",text:"Pipeline output'larını input olarak geçir"},
-      {id:"d37",text:"Scheduled pipeline: her hafta otomatik"},
-    ]},
-    {title:"DP-100 — Endpoints",items:[
-      {id:"d38",text:"Real-time vs batch endpoint farkı"},
-      {id:"d39",text:"Managed online endpoint oluştur, deploy et"},
-      {id:"d40",text:"Python ile test isteği: requests.post()"},
-      {id:"d41",text:"Blue/green deployment: traffic split"},
-      {id:"d42",text:"Batch endpoint — büyük CSV üzerinde inference"},
-      {id:"d43",text:"Endpoint monitoring: latency, throughput, error rate"},
-      {id:"d44",text:"Endpoint ve compute'u sil — maliyet kontrolü"},
-    ]},
-    {title:"DP-100 — Sınav",items:[
-      {id:"d45",text:"MS Learn DP-100 tüm modülleri tamamlandı mı?"},
-      {id:"d46",text:"Udemy DP-100 kurs al (Scott Duffy)"},
-      {id:"d47",text:"Mock exam 1 — puanı not et"},
-      {id:"d48",text:"Zayıf alanları tekrar et"},
-      {id:"d49",text:"Mock exam 2 — hedef %75+"},
-      {id:"d50",text:"Sınava kaydol: Pearson VUE, ~165€"},
-    ]},
-    {title:"LLM / RAG — Temel",items:[
-      {id:"d51",text:"LangChain: 'Build a simple LLM app' tutorial"},
-      {id:"d52",text:"PromptTemplate ile 3 farklı şablon yaz"},
-      {id:"d53",text:"ChatOpenAI bağla, soru-cevap çalıştır"},
-      {id:"d54",text:"LLMChain: prompt + model + output parser"},
-      {id:"d55",text:"ConversationBufferMemory — çok turlu sohbet"},
-      {id:"d56",text:"HuggingFace ücretsiz model dene"},
-      {id:"d57",text:"RAG nedir — 5 cümle özetle, diyagram çiz"},
-    ]},
-    {title:"LLM / RAG — Build",items:[
-      {id:"d58",text:"PyPDFLoader ile PDF yükle"},
-      {id:"d59",text:"RecursiveCharacterTextSplitter ile chunk'lara böl"},
-      {id:"d60",text:"OpenAIEmbeddings ile embedding oluştur"},
-      {id:"d61",text:"ChromaDB vector store kur"},
-      {id:"d62",text:"Similarity search: en yakın 3 chunk'ı bul"},
-      {id:"d63",text:"RetrievalQA chain: query → retrieve → LLM"},
-      {id:"d64",text:"MLflow entegre: query ve response'u logla"},
-      {id:"d65",text:"Tez verisini kullan: persona açıklamalarını yükle"},
-    ]},
-    {title:"LLM / RAG — Deploy",items:[
-      {id:"d66",text:"Streamlit arayüzü: input, submit, response"},
-      {id:"d67",text:"Kaynak gösterimi ekle: hangi chunk kullanıldı"},
-      {id:"d68",text:"Error handling: API hatası, timeout"},
-      {id:"d69",text:"requirements.txt + Dockerfile"},
-      {id:"d70",text:"Azure Container Apps'e deploy"},
-      {id:"d71",text:"Mermaid mimari diyagramı — README'ye ekle"},
-      {id:"d72",text:"README: problem, mimari, kurulum, örnekler"},
-      {id:"d73",text:"LinkedIn için 3 cümlelik proje özeti (İngilizce)"},
-      {id:"d74",text:"CV'ye ekle: 2 bullet — ne yaptın + teknolojiler"},
-    ]},
-  ]}
-};
+const DEFAULT_DATA = {};
 
 // ── Init ──────────────────────────────────────────────────────
 load();
