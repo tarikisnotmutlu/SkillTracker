@@ -1,20 +1,15 @@
-// api/auth.js
 export default function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { password } = req.body;
+  const { password } = req.body || {};
   const correct = process.env.SKILL_PASSWORD;
+  const token   = process.env.AUTH_TOKEN || 'tarik_skill_2026';
 
   if (!correct) return res.status(500).json({ error: 'SKILL_PASSWORD env var eksik' });
-
-  if (password === correct) {
-    const token = process.env.AUTH_TOKEN || 'tarik_auth_2026';
-    // HttpOnly yok — JS ile okunabilmesi için
-    res.setHeader('Set-Cookie',
-      `skill_auth=${token}; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 30}; Path=/`
-    );
-    return res.status(200).json({ ok: true });
-  }
-
+  if (password === correct) return res.status(200).json({ ok: true, token });
   return res.status(401).json({ error: 'Yanlış şifre' });
 }
