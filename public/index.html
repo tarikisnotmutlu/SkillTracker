@@ -334,100 +334,26 @@
   .mini-test-q:last-child { border-bottom:none; }
   .coach-loading { display:flex; flex-direction:column; align-items:center; gap:16px; padding:40px 20px; color:var(--muted); }
   .coach-spinner { width:32px; height:32px; border:3px solid var(--border); border-top-color:#ec4899; border-radius:50%; animation:spin 0.8s linear infinite; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-
-  /* Password Gate */
-  .pw-overlay {
-    position:fixed; inset:0; background:#0f0f0f; z-index:9999;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    padding:32px;
-  }
-  .pw-logo { font-size:52px; margin-bottom:8px; }
-  .pw-title { font-size:24px; font-weight:700; color:#f0f0f0; margin-bottom:4px; }
-  .pw-sub { font-size:13px; color:#666; margin-bottom:36px; }
-  .pw-dots { display:flex; gap:12px; margin-bottom:28px; }
-  .pw-dot { width:14px; height:14px; border-radius:50%; border:2px solid #444; transition:all 0.15s; }
-  .pw-dot.filled { background:#ec4899; border-color:#ec4899; }
-  .pw-dot.error { background:#f87171; border-color:#f87171; animation:shake 0.3s; }
-  .pw-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:280px; }
-  .pw-btn {
-    aspect-ratio:1; border-radius:50%; border:1px solid #2a2a2a; background:#1a1a1a;
-    color:#f0f0f0; font-size:22px; font-weight:600; cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    transition:background 0.1s; font-family:'DM Sans',sans-serif;
-  }
-  .pw-btn:active { background:#333; }
-  .pw-btn.del { font-size:18px; color:#666; }
-  .pw-btn.empty { opacity:0; pointer-events:none; }
-  .pw-hint { font-size:12px; color:#555; margin-top:20px; text-align:center; }
-  .pw-set-label { font-size:13px; color:#ec4899; font-weight:600; margin-bottom:24px; }
-  @keyframes shake {
-    0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
+  @keyframes spin { to { transform:rotate(360deg); } } 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)}
   }
 </style>
 </head>
 <body>
 <script>
-// ── Auth — localStorage token ─────────────────────────────────
 (function() {
   var token = localStorage.getItem('skill_token');
-  if (!token) { window.location.replace('/login.html'); }
+  if (!token) { window.location.replace('/login.html'); return; }
   window._authToken = token;
 })();
 </script>
+<script>
 
-<div id="lockScreen" style="display:none;position:fixed;inset:0;background:#0f0f0f;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
-  <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:20px;padding:40px 32px;width:100%;max-width:340px;text-align:center">
-    <div style="font-size:48px;margin-bottom:16px">🎯</div>
-    <h1 style="font-size:22px;font-weight:700;margin-bottom:6px;color:#f0f0f0">Skill Tracker</h1>
-    <p style="font-size:13px;color:#666;margin-bottom:28px">Kişisel Öğrenme Koçun</p>
-    <input id="lockPw" type="password" placeholder="••••••••" maxlength="50"
-      style="width:100%;padding:14px 16px;border-radius:12px;border:1px solid #333;background:#0f0f0f;color:#f0f0f0;font-size:16px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:12px;box-sizing:border-box"
-      onkeydown="if(event.key==='Enter')checkLock()">
-    <button onclick="checkLock()"
-      style="width:100%;padding:14px;border-radius:12px;border:none;background:#ec4899;color:#000;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
-      Giriş
-    </button>
-    <div id="lockErr" style="color:#f87171;font-size:12px;margin-top:10px;min-height:18px"></div>
-  </div>
+</script>
+
+
 </div>
 
-<script>
-// ── Lock Screen ───────────────────────────────────────────────
-// Şifreni değiştirmek için: LOCK_HASH sabitini SHA-256 hash ile güncelle
-// Geçici şifre: "skill2026" → production'da değiştir
-const LOCK_HASH = "5d75acce7e0ef9a9393a4fd848b9cb554b78ef184e311dec8e957cd13ba1ac13";
 
-async function sha256(str) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-async function checkLock() {
-  const pw = document.getElementById('lockPw').value;
-  const err = document.getElementById('lockErr');
-  if (!pw) { err.textContent = 'Şifre gir'; return; }
-  const hash = await sha256(pw);
-  // Stored hash ile karşılaştır
-  const stored = localStorage.getItem('skt_lock_hash') || LOCK_HASH;
-  if (hash === stored) {
-    sessionStorage.setItem('skt_auth', '1');
-    document.getElementById('lockScreen').style.display = 'none';
-    document.body.style.overflow = '';
-  } else {
-    err.textContent = 'Yanlış şifre';
-    document.getElementById('lockPw').value = '';
-    document.getElementById('lockPw').focus();
-  }
-}
-
-// İlk yüklemede kontrol
-if (!sessionStorage.getItem('skt_auth')) {
-  document.getElementById('lockScreen').style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('lockPw').focus(), 100);
-}
-</script>
 
 <div class="header">
   <div style="display:flex;align-items:center;gap:8px">
@@ -448,34 +374,6 @@ if (!sessionStorage.getItem('skt_auth')) {
   </div>
 </div>
 
-
-<!-- Password Gate -->
-<div id="pwOverlay" class="pw-overlay">
-  <div class="pw-logo">🧠</div>
-  <div class="pw-title">Skill Tracker</div>
-  <div class="pw-sub" id="pwSub">Kişisel Öğrenme Koçu</div>
-  <div class="pw-set-label" id="pwSetLabel" style="display:none">Yeni PIN belirle (6 rakam)</div>
-  <div class="pw-dots" id="pwDots">
-    <div class="pw-dot" id="d0"></div><div class="pw-dot" id="d1"></div>
-    <div class="pw-dot" id="d2"></div><div class="pw-dot" id="d3"></div>
-    <div class="pw-dot" id="d4"></div><div class="pw-dot" id="d5"></div>
-  </div>
-  <div class="pw-pad">
-    <button class="pw-btn" onclick="pwPress(1)">1</button>
-    <button class="pw-btn" onclick="pwPress(2)">2</button>
-    <button class="pw-btn" onclick="pwPress(3)">3</button>
-    <button class="pw-btn" onclick="pwPress(4)">4</button>
-    <button class="pw-btn" onclick="pwPress(5)">5</button>
-    <button class="pw-btn" onclick="pwPress(6)">6</button>
-    <button class="pw-btn" onclick="pwPress(7)">7</button>
-    <button class="pw-btn" onclick="pwPress(8)">8</button>
-    <button class="pw-btn" onclick="pwPress(9)">9</button>
-    <button class="pw-btn empty"></button>
-    <button class="pw-btn" onclick="pwPress(0)">0</button>
-    <button class="pw-btn del" onclick="pwDel()">⌫</button>
-  </div>
-  <div class="pw-hint" id="pwHint"></div>
-</div>
 
 <div class="track-tabs" id="trackTabs"></div>
 <div id="sectionsContainer" class="sections"></div>
@@ -524,120 +422,7 @@ if (!sessionStorage.getItem('skt_auth')) {
 </div>
 
 
-// ── Password Gate ─────────────────────────────────────────────
-let pwBuffer = "";
-let pwMode = "check"; // "check" | "set" | "confirm"
-let pwFirst = "";
-
-async function sha256(str) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str + "skt_v1"));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
-}
-
-async function pwInit() {
-  // Already authenticated this session?
-  if (sessionStorage.getItem("skt_auth") === "ok") { pwUnlock(); return; }
-  const stored = localStorage.getItem("skt_pin_hash");
-  if (!stored) {
-    pwMode = "set";
-    document.getElementById("pwSetLabel").style.display = "block";
-    document.getElementById("pwSub").textContent = "İlk kullanım — PIN oluştur";
-  }
-}
-
-function pwPress(n) {
-  if (pwBuffer.length >= 6) return;
-  pwBuffer += n;
-  pwUpdateDots();
-  if (pwBuffer.length === 6) setTimeout(pwSubmit, 100);
-}
-
-function pwDel() {
-  pwBuffer = pwBuffer.slice(0, -1);
-  pwUpdateDots();
-  // Clear any error dots
-  for (let i=0;i<6;i++) document.getElementById("d"+i)?.classList.remove("error");
-}
-
-function pwUpdateDots(error=false) {
-  for (let i=0;i<6;i++) {
-    const d = document.getElementById("d"+i);
-    if (!d) continue;
-    d.className = "pw-dot" + (i < pwBuffer.length ? (error ? " error" : " filled") : "");
-  }
-}
-
-async function pwSubmit() {
-  const stored = localStorage.getItem("skt_pin_hash");
-
-  if (pwMode === "set") {
-    pwFirst = pwBuffer;
-    pwBuffer = "";
-    pwMode = "confirm";
-    document.getElementById("pwSetLabel").textContent = "PIN'i tekrar gir";
-    document.getElementById("pwSub").textContent = "Doğrulama";
-    pwUpdateDots();
-    return;
-  }
-
-  if (pwMode === "confirm") {
-    if (pwBuffer !== pwFirst) {
-      pwError("PIN'ler eşleşmedi, tekrar dene");
-      pwMode = "set"; pwFirst = "";
-      document.getElementById("pwSetLabel").textContent = "Yeni PIN belirle (6 rakam)";
-      document.getElementById("pwSub").textContent = "İlk kullanım — PIN oluştur";
-      return;
-    }
-    const hash = await sha256(pwBuffer);
-    localStorage.setItem("skt_pin_hash", hash);
-    sessionStorage.setItem("skt_auth", "ok");
-    pwUnlock();
-    return;
-  }
-
-  // Check mode
-  const hash = await sha256(pwBuffer);
-  if (hash === stored) {
-    sessionStorage.setItem("skt_auth", "ok");
-    pwUnlock();
-  } else {
-    pwError("Yanlış PIN");
-  }
-}
-
-function pwError(msg) {
-  pwUpdateDots(true);
-  document.getElementById("pwHint").textContent = msg;
-  document.getElementById("pwHint").style.color = "#f87171";
-  setTimeout(() => {
-    pwBuffer = "";
-    pwUpdateDots();
-    document.getElementById("pwHint").textContent = "";
-  }, 900);
-}
-
-function pwUnlock() {
-  const ov = document.getElementById("pwOverlay");
-  ov.style.transition = "opacity 0.3s";
-  ov.style.opacity = "0";
-  setTimeout(() => { ov.style.display = "none"; }, 300);
-}
-
-// Allow PIN reset via long-press on title (for recovery)
-document.addEventListener("DOMContentLoaded", () => {
-  let pressTimer;
-  const title = document.querySelector(".pw-title");
-  if (title) {
-    title.addEventListener("pointerdown", () => {
-      pressTimer = setTimeout(() => {
-        if (confirm("PIN'i sıfırla? Yeni PIN oluşturman gerekecek.")) {
-          localStorage.removeItem("skt_pin_hash");
-          sessionStorage.removeItem("skt_auth");
-          location.reload();
-        }
-      }, 3000);
-    });
-    title.addEventListener("pointerup", () => clearTimeout(pressTimer));
+title.addEventListener("pointerup", () => clearTimeout(pressTimer));
   }
   pwInit();
 });
@@ -1352,8 +1137,8 @@ function createTestOutput() {
 }
 
 function logout() {
-  sessionStorage.removeItem('skt_auth');
-  location.reload();
+  localStorage.removeItem('skill_token');
+  window.location.replace('/login.html');
 }
 
 function closeCoach() {
