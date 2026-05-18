@@ -98,8 +98,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 .track-progress-pct{font-size:11px;font-family:'DM Mono',monospace;color:var(--muted);width:36px;text-align:right;flex-shrink:0}
 .activity-chart{padding:16px}
 .activity-title{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em}
-.activity-bars{display:flex;align-items:flex-end;gap:4px;height:60px}
-.activity-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.activity-bars{display:flex;align-items:flex-end;gap:3px;height:80px}
+.activity-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;height:80px;justify-content:flex-end}
 .activity-bar{width:100%;border-radius:3px 3px 0 0;transition:height 0.3s;min-height:2px}
 .activity-bar-label{font-size:9px;color:var(--muted);font-family:'DM Mono',monospace;white-space:nowrap}
 
@@ -117,7 +117,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);hei
 /* ── History view ── */
 .hist-item{border:1px solid var(--border);border-radius:var(--radius);margin:10px 16px;overflow:hidden}
 .hist-header{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface2);cursor:pointer}
-.hist-content{display:none;padding:12px 16px;font-size:12px;line-height:1.7;white-space:pre-wrap;max-height:300px;overflow-y:auto;color:var(--text);background:var(--bg)}
+.hist-content{display:none;padding:14px 16px;font-size:12.5px;line-height:1.8;white-space:pre-wrap;max-height:400px;overflow-y:auto;color:var(--text);background:var(--bg);border-top:1px solid var(--border)}
 
 /* ── Settings view ── */
 .settings-section{padding:16px;border-bottom:1px solid var(--border)}
@@ -219,8 +219,7 @@ pre.format-block{background:var(--bg);border:1px solid var(--border);border-radi
     <div class="ribbon">
       <button class="ribbon-btn accent" onclick="openImport()">+ JSON Yükle</button>
       <div class="ribbon-sep"></div>
-      <button class="ribbon-btn" onclick="toggleAllSections()" id="collapseBtn">⊟ Tümünü Kapat</button>
-      <button class="ribbon-btn" onclick="expandAllSections()">⊞ Tümünü Aç</button>
+      <button class="ribbon-btn" onclick="toggleCollapse()" id="collapseBtn">⊟ Kapat</button>
       <div class="ribbon-sep"></div>
       <button class="ribbon-btn" onclick="exportChecked()">📋 Kopyala</button>
       <button class="ribbon-btn" onclick="exportCheckedJson()">↓ JSON İndir</button>
@@ -257,7 +256,10 @@ pre.format-block{background:var(--bg);border:1px solid var(--border);border-radi
     <div class="test-bottom">
       <span style="font-size:12px;color:var(--muted)" id="testSelCount">0 madde seçili</span>
       <div style="flex:1"></div>
-      <button class="apply-btn" style="width:auto;padding:10px 20px;margin-top:0" onclick="runTest()">Test Oluştur</button>
+      <div style="display:flex;gap:8px">
+        <button class="apply-btn" style="width:auto;padding:10px 18px;margin-top:0;background:var(--surface2);color:var(--text);border:1px solid var(--border)" onclick="copyTestItems()">📋 Kopyala</button>
+        <button class="apply-btn" style="width:auto;padding:10px 18px;margin-top:0" onclick="runTest()">🤖 AI Test</button>
+      </div>
     </div>
     <div id="testResultArea" class="test-result-area" style="display:none"></div>
   </div>
@@ -593,19 +595,12 @@ function toggleSection(sk) {
   renderSections();
 }
 
-function expandAllSections() {
-  allCollapsed = false;
-  collapsed = {};
-  var btn = document.getElementById("collapseBtn");
-  if (btn) btn.textContent = "⊟ Tümünü Kapat";
-  renderSections();
-}
-
-function toggleAllSections() {
-  allCollapsed = !allCollapsed;
-  var btn = document.getElementById("collapseBtn");
-  if (btn) btn.textContent = allCollapsed ? "⊟ Tümü Kapalı" : "⊟ Tümünü Kapat";
-  renderSections();
+function expandAllSections() { allCollapsed=false; collapsed={}; renderSections(); updateCollapseBtn(); }
+function toggleAllSections() { allCollapsed=!allCollapsed; if(!allCollapsed) collapsed={}; renderSections(); updateCollapseBtn(); }
+function toggleCollapse() { toggleAllSections(); }
+function updateCollapseBtn() {
+  var btn=document.getElementById("collapseBtn");
+  if(btn) btn.textContent=allCollapsed?"⊞ Aç":"⊟ Kapat";
 }
 
 function toggleItem(id) {
@@ -681,11 +676,13 @@ function renderStats() {
 
   // Activity last 14 days
   var days=14; var activity=[];
+  var todayTs=new Date(); todayTs.setHours(0,0,0,0);
   for(var i=days-1;i>=0;i--) {
-    var d=new Date(Date.now()-i*86400000);
-    var ds=d.toISOString().slice(0,10);
-    var label=["Paz","Pzt","Sal","Çar","Per","Cum","Cmt"][d.getDay()];
-    var count=Object.keys(checkedDates).filter(function(id){return checkedDates[id]===ds&&checked[id];}).length;
+    var d=new Date(todayTs.getTime()-i*86400000);
+    var ds=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+    var label=["Pa","Pt","Sa","Ça","Pe","Cu","Ct"][d.getDay()];
+    var count=0;
+    Object.keys(checkedDates).forEach(function(id){ if(checkedDates[id]===ds && checked[id]) count++; });
     activity.push({ds:ds,label:label,count:count});
   }
   var maxAct=Math.max(1,Math.max.apply(null,activity.map(function(a){return a.count;})));
@@ -711,11 +708,15 @@ function renderStats() {
   html+='<div class="activity-chart"><div class="activity-title">Son 14 Gün Aktivitesi</div>';
   html+='<div class="activity-bars">';
   activity.forEach(function(a){
-    var h=a.count>0?Math.max(8,Math.round(a.count/maxAct*52)):2;
-    var color=a.ds===todayStr?"var(--accent)":"var(--blue)";
+    var h=a.count>0?Math.max(10,Math.round(a.count/maxAct*48)):3;
+    var isToday=a.ds===todayStr;
+    var color=isToday?"var(--accent)":"var(--blue)";
     html+='<div class="activity-bar-wrap">'+
-      '<div class="activity-bar" style="height:'+h+'px;background:'+(a.count>0?color:"var(--border)")+'"></div>'+
-      '<div class="activity-bar-label">'+a.label+'</div>'+
+      '<div style="flex:1;display:flex;align-items:flex-end">'+
+        '<div class="activity-bar" style="width:100%;height:'+h+'px;background:'+(a.count>0?color:"var(--subtle)")+';border-radius:3px 3px 0 0"></div>'+
+      '</div>'+
+      (a.count>0?'<div style="font-size:9px;color:'+(isToday?"var(--accent)":"var(--muted)")+';font-family:DM Mono,monospace">'+a.count+'</div>':'<div style="font-size:9px;color:transparent">0</div>')+
+      '<div class="activity-bar-label" style='+(isToday?"color:var(--accent);font-weight:700":"")+">"+ a.label+'</div>'+
       '</div>';
   });
   html+='</div></div>';
@@ -756,8 +757,10 @@ function renderTestItems() {
 
   // Select all / none toolbar
   var html='<div style="display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;flex-wrap:wrap">'+
-    '<button class="ribbon-btn accent" onclick="selectAllTestItems()">✓ Tümünü Seç</button>'+
-    '<button class="ribbon-btn" onclick="deselectAllTestItems()">✗ Hiçbirini Seçme</button>'+
+    '<button class="ribbon-btn accent" id="testSelAllBtn" onclick="toggleSelectAllTest()">☐ Tümünü Seç</button>'+
+    '<div class="ribbon-sep"></div>'+
+    '<span style="font-size:11px;color:var(--muted)" id="testSelCountInline">0 seçili</span>'+
+    '<div class="ribbon-sep"></div>'+
     '<div class="ribbon-sep"></div>'+
     '<button class="ribbon-btn" onclick="expandAllTestSections()">⊞ Aç</button>'+
     '<button class="ribbon-btn" onclick="collapseAllTestSections()">⊟ Kapat</button>'+
@@ -785,6 +788,18 @@ function renderTestItems() {
   updateTestSelCount();
 }
 
+function toggleTestCollapse() {
+  var t=data[testActiveTrack]; if(!t) return;
+  var anyOpen=false;
+  (t.sections||[]).forEach(function(_,si){ if(!testCollapsed[testActiveTrack+"-"+si]) anyOpen=true; });
+  (t.sections||[]).forEach(function(_,si){
+    testCollapsed[testActiveTrack+"-"+si]=anyOpen?true:false;
+  });
+  var btn=document.getElementById("testColBtn");
+  if(btn) btn.textContent=anyOpen?"⊞ Aç":"⊟ Kapat";
+  renderTestItems();
+}
+
 function toggleTestSectionCollapse(si) {
   var key=testActiveTrack+"-"+si;
   testCollapsed[key]=!testCollapsed[key];
@@ -796,22 +811,28 @@ function collapseAllTestSections(){
   (t.sections||[]).forEach(function(_,si){testCollapsed[testActiveTrack+"-"+si]=true;});
   renderTestItems();
 }
-function selectAllTestItems(){
-  var t=data[testActiveTrack]; if(!t) return;
-  (t.sections||[]).forEach(function(sec,si){
-    sec.items.filter(function(i){return checked[i.id];}).forEach(function(item){
-      selectedTestItems[item.id]=true;
-      var cb=document.getElementById("ti_"+item.id); if(cb) cb.checked=true;
-      var sc=document.getElementById("tsec_"+si); if(sc) sc.checked=true;
+var _allTestSelected = false;
+function toggleSelectAllTest() {
+  _allTestSelected = !_allTestSelected;
+  if (_allTestSelected) {
+    var t=data[testActiveTrack]; if(!t) return;
+    (t.sections||[]).forEach(function(sec,si){
+      sec.items.filter(function(i){return checked[i.id];}).forEach(function(item){
+        selectedTestItems[item.id]=true;
+        var cb=document.getElementById("ti_"+item.id); if(cb) cb.checked=true;
+        var sc=document.getElementById("tsec_"+si); if(sc) sc.checked=true;
+      });
     });
-  });
+  } else {
+    selectedTestItems={};
+    document.querySelectorAll("#testItemList input[type=checkbox]").forEach(function(cb){cb.checked=false;});
+  }
+  var btn=document.getElementById("testSelAllBtn");
+  if(btn) btn.textContent=_allTestSelected?"☑ Tümünü Kaldır":"☐ Tümünü Seç";
   updateTestSelCount();
 }
-function deselectAllTestItems(){
-  selectedTestItems={};
-  document.querySelectorAll("#testItemList input[type=checkbox]").forEach(function(cb){cb.checked=false;});
-  updateTestSelCount();
-}
+function selectAllTestItems(){ _allTestSelected=false; toggleSelectAllTest(); }
+function deselectAllTestItems(){ _allTestSelected=true; toggleSelectAllTest(); }
 
 function toggleTestItem(id) {
   var cb=document.getElementById("ti_"+id);
@@ -834,6 +855,23 @@ function toggleTestSection(si, checked_) {
 function updateTestSelCount() {
   var n=Object.keys(selectedTestItems).length;
   var el=document.getElementById("testSelCount"); if(el) el.textContent=n+" madde seçili";
+  var el2=document.getElementById("testSelCountInline"); if(el2) el2.textContent=n+" seçili";
+  _allTestSelected = false;
+  var btn=document.getElementById("testSelAllBtn");
+  if(btn) btn.textContent="☐ Tümünü Seç";
+}
+
+function copyTestItems() {
+  var ids = Object.keys(selectedTestItems);
+  if (!ids.length) { toast("Önce madde seç", 2000); return; }
+  var t = data[testActiveTrack], m = (t||{}).meta||{};
+  var all = allItems(testActiveTrack);
+  var done = all.filter(function(i){ return selectedTestItems[i.id]; }).map(function(i){ return "- " + i.text; });
+  var header = (m.icon||"") + " " + (m.label||testActiveTrack) + " — Seçili Konular (" + done.length + ")";
+  var prompt = header + "\n\n" + done.join("\n") + "\n\nBu konulardan bana test soruları oluştur.";
+  navigator.clipboard.writeText(prompt).then(function(){
+    toast("✓ Kopyalandı — Claude'a yapıştır!", 3000);
+  }).catch(function(){ prompt("Kopyala:", prompt); });
 }
 
 function runTest() {
@@ -883,7 +921,11 @@ function renderHistory() {
 
 function toggleHist(idx) {
   var el=document.getElementById("hc_"+idx);
-  if(el) el.style.display=el.style.display==="none"||el.style.display===""?"block":"none";
+  var arrow=document.getElementById("harrow_"+idx);
+  if(!el) return;
+  var isOpen=el.style.display==="block";
+  el.style.display=isOpen?"none":"block";
+  if(arrow) arrow.textContent=isOpen?"▼":"▲";
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -945,12 +987,15 @@ function setCoachTime(mins) {
   });
 }
 
-function selectAllCoachTracks() {
-  document.querySelectorAll(".coach-track-sel").forEach(function(cb){ cb.checked=true; });
+var _allCoachSelected = false;
+function toggleSelectAllCoach() {
+  _allCoachSelected = !_allCoachSelected;
+  document.querySelectorAll(".coach-track-sel").forEach(function(cb){ cb.checked = _allCoachSelected; });
+  var btn = document.getElementById("coachSelAllBtn");
+  if (btn) btn.textContent = _allCoachSelected ? "☑ Kaldır" : "☐ Tümünü Seç";
 }
-function deselectAllCoachTracks() {
-  document.querySelectorAll(".coach-track-sel").forEach(function(cb){ cb.checked=false; });
-}
+function selectAllCoachTracks(){ _allCoachSelected=false; toggleSelectAllCoach(); }
+function deselectAllCoachTracks(){ _allCoachSelected=true; toggleSelectAllCoach(); }
 
 function generateCoachPlan() {
   var sel=[];
@@ -1067,7 +1112,7 @@ function exportChecked(){
 function exportCheckedJson(){
   var result=Object.keys(data).map(function(tid){
     var t=data[tid],m=(t.meta||{});
-    var done=(t.sections||[]).reduce(function(a,s){return a.concat(s.items.filter(function(i){return checked[i.id];}).map(function(i){return {id:i.id,text:i.text};}));},{});
+    var done=(t.sections||[]).reduce(function(a,s){return a.concat(s.items.filter(function(i){return checked[i.id];}).map(function(i){return {id:i.id,text:i.text};}));}, []);
     return Object.keys(done).length?{track:tid,trackLabel:m.label,completed:Object.values(done)}:null;
   }).filter(Boolean);
   if(!result.length){toast("Tiklenmiş madde yok",2000);return;}
