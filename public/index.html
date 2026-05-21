@@ -171,6 +171,10 @@ pre.format-block{background:var(--bg);border:1px solid var(--border);border-radi
 .ribbon-btn:hover{background:var(--surface2)}
 .ribbon-btn.accent{border-color:var(--accent);color:var(--accent)}
 .ribbon-sep{width:1px;height:20px;background:var(--border);margin:0 2px}
+.section-drag-over{border:1.5px dashed var(--accent)!important;background:rgba(236,72,153,0.05)!important}
+.section-copy-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;opacity:0;transition:opacity 0.15s;flex-shrink:0}
+.section-header:hover .section-copy-btn{opacity:0.6}
+.section-header:hover .section-copy-btn:hover{opacity:1;color:var(--text)}
 .section-sep{padding:10px 16px;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border)}
 </style>
 </head>
@@ -361,6 +365,7 @@ var streak = 0, lastActiveDate = "";
 var trackOrder = [], archivedTracks = {}, aiHistory = [];
 var allCollapsed = false, editingId = null, collapsed = {};
 var dragTid = null;
+var dragSecIdx = null; var dragSecTid = null;
 var pomoSeconds = 1500, pomoTotal = 1500, pomoRunning = false, pomoInterval = null, pomoIsBreak = false;
 var currentMode = "merge";
 var coachMinutes = 60;
@@ -608,6 +613,58 @@ function toggleItem(id) {
   if (checked[id]) { checkedDates[id]=new Date().toISOString().slice(0,10); }
   else { delete checkedDates[id]; }
   updateStreak(); render();
+}
+
+// ── Section drag-drop ─────────────────────────────────────
+function onSecDragStart(e, tid, si) {
+  dragSecTid = tid; dragSecIdx = si;
+  e.dataTransfer.effectAllowed = "move";
+  e.stopPropagation();
+}
+
+function onSecDragOver(e, toSi) {
+  e.preventDefault(); e.stopPropagation();
+  // Highlight target
+  var el = document.getElementById("sec_" + activeTrack + "-" + toSi);
+  if (el && toSi !== dragSecIdx) el.classList.add("section-drag-over");
+}
+
+function onSecDragLeave(e) {
+  e.stopPropagation();
+  document.querySelectorAll(".section-drag-over").forEach(function(el){ el.classList.remove("section-drag-over"); });
+}
+
+function onSecDrop(e, toSi) {
+  e.preventDefault(); e.stopPropagation();
+  document.querySelectorAll(".section-drag-over").forEach(function(el){ el.classList.remove("section-drag-over"); });
+  if (dragSecTid === null || dragSecIdx === null || dragSecIdx === toSi) { dragSecIdx=null; dragSecTid=null; return; }
+  var t = data[dragSecTid]; if (!t || !t.sections) return;
+  var secs = t.sections;
+  var moved = secs.splice(dragSecIdx, 1)[0];
+  secs.splice(toSi, 0, moved);
+  // Update collapsed keys
+  var newCollapsed = {};
+  Object.keys(collapsed).forEach(function(k){
+    if (!k.startsWith(dragSecTid+"-")) newCollapsed[k] = collapsed[k];
+  });
+  collapsed = newCollapsed;
+  dragSecIdx = null; dragSecTid = null;
+  save(); renderSections();
+}
+
+// ── Section copy ──────────────────────────────────────────────
+function copySection(tid, si) {
+  var t = data[tid]; if (!t) return;
+  var sec = (t.sections||[])[si]; if (!sec) return;
+  var m = t.meta||{};
+  var lines = ["== " + (m.label||tid) + " / " + sec.title + " =="];
+  sec.items.filter(function(item){ return !checked[item.id]; }).forEach(function(item){
+    lines.push("- " + item.text);
+    if (item.note) lines.push("  💡 " + item.note);
+  });
+  navigator.clipboard.writeText(lines.join("\n"))
+    .then(function(){ toast("✓ Bölüm kopyalandı", 2000); })
+    .catch(function(){ prompt("Kopyala:", lines.join("\n")); });
 }
 
 function dropTrack(e,toTid) {
