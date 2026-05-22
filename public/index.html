@@ -577,10 +577,16 @@ function renderSections() {
         '<button class="edit-btn" onclick="event.stopPropagation();startEdit(\''+item.id+'\')">✏️</button>'+
         '</div>';
     }).join("");
-    return '<div class="section">'+
+    return '<div class="section" id="sec_'+activeTrack+'-'+si+'" draggable="true"'+
+      ' ondragstart="onSecDragStart(event,\''+activeTrack+'\','+si+')"'+
+      ' ondragover="onSecDragOver(event,'+si+')"'+
+      ' ondrop="onSecDrop(event,'+si+')"'+
+      ' ondragleave="onSecDragLeave(event)">'+
       '<div class="section-header" style="'+hdrStyle+'" onclick="toggleSection(\''+sk+'\')">'+
+        '<span style="color:var(--subtle);cursor:grab;margin-right:4px;font-size:11px;flex-shrink:0">⣿</span>'+
         '<span class="section-title">'+sec.title+'</span>'+
         '<span class="section-badge" style="color:'+color+'">'+secDone+'/'+sec.items.length+'</span>'+
+        '<button class="section-copy-btn" onclick="event.stopPropagation();copySection(\''+activeTrack+'\','+si+')" title="Tiksizleri Kopyala">📋</button>'+
         '<span class="section-arrow">'+(isCol?"▼":"▲")+'</span>'+
       '</div>'+itemsHtml+'</div>';
   }).join("");
